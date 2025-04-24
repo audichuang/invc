@@ -1,0 +1,21 @@
+package com.example.async.listener;
+
+import com.example.async.model.TaskEvent;
+import com.example.async.service.TaskService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class KafkaEventListener {
+    private final TaskService taskService;
+
+    @KafkaListener(topics = "task-events", groupId = "sse-group")
+    public void listen(TaskEvent event) {
+        log.info("Received event from Kafka: {}", event);
+        taskService.handleEvent(event);
+    }
+}

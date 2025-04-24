@@ -1,0 +1,146 @@
+package com.example.proxy;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
+
+public class SimpleLoadBalancer {
+    private static final Logger logger = Logger.getLogger(SimpleLoadBalancer.class.getName());
+    private static final List<String> BACKEND_SERVERS = Arrays.asList(
+            "http://localhost:9090",
+            "http://localhost:9091");
+    private static final AtomicInteger counter = new AtomicInteger(0);
+
+    public static void main(String[] args) throws IOException {
+        int port = 8080;
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/", new ProxyHandler());
+        server.setExecutor(Executors.newFixedThreadPool(10));
+        server.start();
+
+        logger.info("反向代理服務器啟動在端口 " + port);
+        logger.info("後端服務器: " + BACKEND_SERVERS);
+    }
+
+    static class ProxyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            // 獲取目標服務器（簡單的輪詢負載均衡）
+            String targetServer = getNextServer();
+
+            try {
+                // 構建目標 URL
+                String path = exchange.getRequestURI().toString();
+                URL url = new URL(targetServer + path);
+
+                // 特殊處理 SSE 請求，確保 SSE 連接保持穩定
+                boolean isSseRequest = path.contains("/events/");
+
+                if (isSseRequest) {
+                    logger.info("檢測到 SSE 請求: " + path + " -> " + targetServer);
+                }
+
+                // 創建連接
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod(exchange.getRequestMethod());
+
+                // 複製請求頭
+                for (Map.Entry<String, List<String>> header : exchange.getRequestHeaders().entrySet()) {
+                    String key = header.getKey();
+                    for (String value : header.getValue()) {
+                        connection.addRequestProperty(key, value);
+                    }
+                }
+
+                // 如果有請求體，複製請求體
+                if ("POST".equals(exchange.getRequestMethod()) || "PUT".equals(exchange.getRequestMethod())) {
+                    connection.setDoOutput(true);
+                    try (InputStream is = exchange.getRequestBody();
+                            OutputStream os = connection.getOutputStream()) {
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = is.read(buffer)) != -1) {
+                            os.write(buffer, 0, length);
+                        }
+                    }
+                }
+
+                // 獲取響應狀態
+                int responseCode = connection.getResponseCode();
+                exchange.sendResponseHeaders(responseCode, 0);
+
+                // 複製響應頭
+                for (Map.Entry<String, List<String>> header : connection.getHeaderFields().entrySet()) {
+                    String key = header.getKey();
+                    if (key != null) { // 忽略狀態行
+                        for (String value : header.getValue()) {
+                            exchange.getResponseHeaders().add(key, value);
+                        }
+                    }
+                }
+
+                // 複製響應體
+                try (InputStream is = connection.getInputStream();
+                        OutputStream os = exchange.getResponseBody()) {
+                    byte[] buffer = new byte[1024];
+                    int length;
+                    while ((length = is.read(buffer)) != -1) {
+                        os.write(buffer, 0, length);
+                    }
+                } catch (IOException e) {
+                    // 處理錯誤響應
+                    try (InputStream es = connection.getErrorStream();
+                            OutputStream os = exchange.getResponseBody()) {
+                        if (es != null) {
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            while ((length = es.read(buffer)) != -1) {
+                                os.write(buffer, 0, length);
+                            }
+                        } else {
+                            byte[] errorMessage = e.getMessage().getBytes();
+                            os.write(errorMessage);
+                        }
+                    }
+                }
+
+                logger.info(String.format("[%s] %s %s -> %s %d",
+                        isSseRequest ? "SSE" : "HTTP",
+                        exchange.getRequestMethod(),
+                        exchange.getRequestURI(),
+                        targetServer,
+                        responseCode));
+
+            } catch (Exception e) {
+                logger.severe("代理請求錯誤: " + e.getMessage());
+                String response = "代理錯誤: " + e.getMessage();
+                exchange.sendResponseHeaders(500, response.length());
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response.getBytes());
+                }
+            } finally {
+                exchange.close();
+            }
+        }
+
+        private String getNextServer() {
+            // 簡單的輪詢負載均衡
+            int index = counter.getAndIncrement() % BACKEND_SERVERS.size();
+            return BACKEND_SERVERS.get(index);
+        }
+    }
+}
