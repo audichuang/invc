@@ -16,16 +16,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 
 public class SimpleLoadBalancer {
-    private static final Logger logger = Logger.getLogger(SimpleLoadBalancer.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SimpleLoadBalancer.class);
     private static final List<String> BACKEND_SERVERS = Arrays.asList(
             "http://localhost:9090",
             "http://localhost:9091");
     private static final AtomicInteger counter = new AtomicInteger(0);
 
     public static void main(String[] args) throws IOException {
+        SLF4JBridgeHandler.removeHandlersForRootLogger();
+        SLF4JBridgeHandler.install();
+
         int port = 8080;
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/", new ProxyHandler());
@@ -164,7 +169,7 @@ public class SimpleLoadBalancer {
                         responseCode));
 
             } catch (Exception e) {
-                logger.severe("代理請求錯誤: " + e.getMessage());
+                logger.error("代理請求錯誤: ", e);
                 String response = "代理錯誤: " + e.getMessage();
                 // 確保錯誤響應也有 CORS 標頭 (上面已添加)
                 exchange.sendResponseHeaders(500, response.length());
