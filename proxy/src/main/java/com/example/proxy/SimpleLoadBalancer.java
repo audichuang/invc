@@ -39,6 +39,19 @@ public class SimpleLoadBalancer {
     static class ProxyHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
+            // 添加 CORS 標頭
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "*"); // 允許所有請求頭
+            exchange.getResponseHeaders().add("Access-Control-Max-Age", "3600"); // 預檢請求快取時間
+
+            // 處理 OPTIONS 預檢請求
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1); // 204 No Content 常用於預檢請求成功
+                exchange.close();
+                return;
+            }
+
             // 獲取目標服務器（簡單的輪詢負載均衡）
             String targetServer = getNextServer();
 
@@ -81,6 +94,7 @@ public class SimpleLoadBalancer {
 
                 // 獲取響應狀態
                 int responseCode = connection.getResponseCode();
+                // 在發送響應頭之前確保 CORS 標頭已添加 (上面已添加)
                 exchange.sendResponseHeaders(responseCode, 0);
 
                 // 複製響應頭
@@ -128,6 +142,7 @@ public class SimpleLoadBalancer {
             } catch (Exception e) {
                 logger.severe("代理請求錯誤: " + e.getMessage());
                 String response = "代理錯誤: " + e.getMessage();
+                // 確保錯誤響應也有 CORS 標頭 (上面已添加)
                 exchange.sendResponseHeaders(500, response.length());
                 try (OutputStream os = exchange.getResponseBody()) {
                     os.write(response.getBytes());

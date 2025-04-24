@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class KafkaEventListener {
     private final TaskService taskService;
 
-    @KafkaListener(topics = "task-events", groupId = "sse-group")
+    @KafkaListener(topics = "task-events", groupId = "${spring.kafka.consumer.group-id}")
     public void listen(TaskEvent event) {
         log.info("Received event from Kafka: {}", event);
         taskService.handleEvent(event);
