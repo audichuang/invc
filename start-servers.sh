@@ -42,3 +42,10 @@ echo "啟動前端..."
 cd frontend
 npm install
 npm start 
+
+
+
+
+
+
+java -jar target/simple-proxy-1.0-SNAPSHOT.jar
