@@ -20,15 +20,15 @@ public class TaskController {
 
     @PostMapping("/first-api")
     public ResponseEntity<String> initiateTask(@RequestBody TaskRequest taskRequest) {
-        log.info("Received task request with correlationId: {}", taskRequest.getCorrelationId());
+        log.info("收到任務請求，關聯 ID: {}", taskRequest.getCorrelationId());
         taskService.processTaskAsync(taskRequest);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body("Task initiated with correlationId: " + taskRequest.getCorrelationId());
+                .body("任務已啟動，關聯 ID: " + taskRequest.getCorrelationId());
     }
 
     @GetMapping(value = "/events/{correlationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeToEvents(@PathVariable String correlationId) {
-        log.info("SSE connection established for correlationId: {}", correlationId);
+        log.info("為關聯 ID {} 建立 SSE 連線", correlationId);
         return taskService.createSseEmitter(correlationId);
     }
 }

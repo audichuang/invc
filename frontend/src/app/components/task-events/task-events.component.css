@@ -1,0 +1,49 @@
+.events-container {
+  font-size: 0.9rem;
+}
+
+.event-item {
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 1rem;
+  word-wrap: break-word; /* 確保長訊息能換行 */
+}
+
+.event-item strong {
+    margin-right: 10px;
+}
+
+.event-item .message {
+    margin-top: 0.25rem;
+}
+
+.event-item .result {
+    font-size: 0.85rem;
+    background-color: rgba(0,0,0,0.03);
+    padding: 5px;
+    border-radius: 3px;
+    margin-top: 5px;
+}
+
+.event-item .result pre {
+    margin-bottom: 0; /* 移除 pre 標籤的默認下邊距 */
+    white-space: pre-wrap; /* 保持換行符和空格 */
+}
+
+
+.event-item .correlation-id {
+    display: block; /* 讓 correlation ID 獨佔一行 */
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    text-align: right;
+}
+
+/* 動畫效果 - 新事件短暫高亮 (可選) */
+@keyframes highlight {
+  from { background-color: rgba(0, 123, 255, 0.2); } /* 淡藍色高亮 */
+  to { background-color: transparent; }
+}
+
+/* 如果您想實現高亮，可以在 TaskEventsComponent 中添加邏輯來添加/移除 .new-event class */
+.event-item.new-event {
+  animation: highlight 1.5s ease-out;
+} 

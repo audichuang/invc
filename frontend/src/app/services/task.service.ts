@@ -15,6 +15,7 @@ export interface TaskEvent {
     message: string;
     result?: any;
     finalEvent: boolean;
+    receivedAt?: Date;
 }
 
 @Injectable({
@@ -54,45 +55,40 @@ export class TaskService {
         // 建立新的 SSE 連接
         this.eventSource = new EventSource(`${this.apiUrl}/events/${correlationId}`);
 
-        // 處理收到的事件
-        this.eventSource.onmessage = (event) => {
-            console.log('收到 SSE 事件:', event.data);
-            const taskEvent: TaskEvent = JSON.parse(event.data);
-            this.eventSubject.next(taskEvent);
+        // Helper function to process and add timestamp
+        const processEvent = (eventData: string, eventName?: string) => {
+            try {
+                const taskEvent: TaskEvent = JSON.parse(eventData);
+                taskEvent.receivedAt = new Date();
+                console.log(`收到 SSE 事件 (${eventName || 'message'}):`, taskEvent);
+                this.eventSubject.next(taskEvent);
 
-            // 如果是最終事件，關閉連接
-            if (taskEvent.finalEvent) {
+                if (taskEvent.finalEvent) {
+                    this.disconnectEventStream();
+                }
+            } catch (error) {
+                console.error(`解析 SSE 事件 (${eventName || 'message'}) 失敗:`, eventData, error);
+                this.eventSubject.next({
+                    correlationId,
+                    status: 'ERROR',
+                    message: `客戶端解析事件失敗: ${eventData}`,
+                    finalEvent: true,
+                    receivedAt: new Date()
+                });
                 this.disconnectEventStream();
             }
         };
 
-        // 處理 SSE 連接的各種事件
-        this.eventSource.addEventListener('CONNECTED', (event: any) => {
-            const taskEvent: TaskEvent = JSON.parse(event.data);
-            this.eventSubject.next(taskEvent);
-        });
+        this.eventSource.onmessage = (event) => {
+            processEvent(event.data);
+        };
 
-        this.eventSource.addEventListener('PROCESSING', (event: any) => {
-            const taskEvent: TaskEvent = JSON.parse(event.data);
-            this.eventSubject.next(taskEvent);
-        });
-
-        this.eventSource.addEventListener('SUBTASK_COMPLETED', (event: any) => {
-            const taskEvent: TaskEvent = JSON.parse(event.data);
-            this.eventSubject.next(taskEvent);
-        });
-
-        this.eventSource.addEventListener('COMPLETED', (event: any) => {
-            const taskEvent: TaskEvent = JSON.parse(event.data);
-            this.eventSubject.next(taskEvent);
-            this.disconnectEventStream();
-        });
-
-        this.eventSource.addEventListener('FAILED', (event: any) => {
-            const taskEvent: TaskEvent = JSON.parse(event.data);
-            this.eventSubject.next(taskEvent);
-            this.disconnectEventStream();
-        });
+        // Use helper for specific listeners
+        this.eventSource.addEventListener('CONNECTED', (event: any) => processEvent(event.data, 'CONNECTED'));
+        this.eventSource.addEventListener('PROCESSING', (event: any) => processEvent(event.data, 'PROCESSING'));
+        this.eventSource.addEventListener('SUBTASK_COMPLETED', (event: any) => processEvent(event.data, 'SUBTASK_COMPLETED'));
+        this.eventSource.addEventListener('COMPLETED', (event: any) => processEvent(event.data, 'COMPLETED'));
+        this.eventSource.addEventListener('FAILED', (event: any) => processEvent(event.data, 'FAILED'));
 
         this.eventSource.onerror = (error) => {
             console.error('SSE 連接錯誤:', error);
@@ -101,7 +97,8 @@ export class TaskService {
                 correlationId,
                 status: 'ERROR',
                 message: 'SSE 連接出錯',
-                finalEvent: true
+                finalEvent: true,
+                receivedAt: new Date()
             });
         };
     }
@@ -113,6 +110,7 @@ export class TaskService {
         if (this.eventSource) {
             this.eventSource.close();
             this.eventSource = null;
+            console.log('SSE 連接已關閉');
         }
     }
 } 

@@ -94,18 +94,42 @@ public class SimpleLoadBalancer {
 
                 // 獲取響應狀態
                 int responseCode = connection.getResponseCode();
-                // 在發送響應頭之前確保 CORS 標頭已添加 (上面已添加)
-                exchange.sendResponseHeaders(responseCode, 0);
 
                 // 複製響應頭
+                // 注意：這裡先清除可能由 exchange 預設的 Content-Type，以確保後端的優先
+                exchange.getResponseHeaders().remove("Content-Type");
                 for (Map.Entry<String, List<String>> header : connection.getHeaderFields().entrySet()) {
                     String key = header.getKey();
                     if (key != null) { // 忽略狀態行
-                        for (String value : header.getValue()) {
-                            exchange.getResponseHeaders().add(key, value);
+                        // 特別處理 Content-Type，使用 set 而不是 add，避免重複
+                        if (key.equalsIgnoreCase("Content-Type")) {
+                            // 使用後端返回的第一個 Content-Type 值 (如果有的話)
+                            if (!header.getValue().isEmpty()) {
+                                exchange.getResponseHeaders().set(key, header.getValue().get(0));
+                            }
+                        } else {
+                            // 其他標頭，可以 add 多個值
+                            for (String value : header.getValue()) {
+                                exchange.getResponseHeaders().add(key, value);
+                            }
                         }
                     }
                 }
+
+                // ***** 強制修正 SSE 的 Content-Type *****
+                if (isSseRequest) {
+                    logger.info("偵測到 SSE 請求，強制設定 Content-Type 為 text/event-stream");
+                    exchange.getResponseHeaders().set("Content-Type", "text/event-stream;charset=UTF-8");
+                    // SSE 通常需要禁用快取並保持連線
+                    exchange.getResponseHeaders().set("Cache-Control",
+                            "no-cache, no-store, max-age=0, must-revalidate");
+                    exchange.getResponseHeaders().set("Pragma", "no-cache");
+                    exchange.getResponseHeaders().set("Expires", "0");
+                    exchange.getResponseHeaders().set("Connection", "keep-alive");
+                }
+
+                // 在發送響應頭之前確保 CORS 標頭已添加 (之前已添加)
+                exchange.sendResponseHeaders(responseCode, 0);
 
                 // 複製響應體
                 try (InputStream is = connection.getInputStream();

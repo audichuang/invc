@@ -15,7 +15,7 @@ public class KafkaEventListener {
 
     @KafkaListener(topics = "task-events", groupId = "${spring.kafka.consumer.group-id}")
     public void listen(TaskEvent event) {
-        log.info("Received event from Kafka: {}", event);
+        log.info("從 Kafka 收到事件: {}", event);
         taskService.handleEvent(event);
     }
 }

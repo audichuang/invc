@@ -1,43 +1,46 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ViewChild, ElementRef, AfterViewChecked, ChangeDetectionStrategy, OnChanges, SimpleChanges } from '@angular/core';
 import { TaskEvent } from '../../services/task.service';
 
 @Component({
-    selector: 'app-task-events',
-    template: `
-    <div class="card">
-      <div class="card-header bg-success text-white">
-        <h4>事件流</h4>
-      </div>
-      <div class="card-body">
-        <div class="events-container" style="max-height: 400px; overflow-y: auto;">
-          <div *ngIf="events.length === 0" class="text-center text-muted">
-            尚未收到任何事件
-          </div>
-          
-          <div *ngFor="let event of events" class="alert" 
-               [ngClass]="{
-                 'alert-info': event.status === 'CONNECTED' || event.status === 'PROCESSING',
-                 'alert-success': event.status === 'COMPLETED' || event.status === 'SUBTASK_COMPLETED',
-                 'alert-danger': event.status === 'FAILED' || event.status === 'ERROR'
-               }">
-            <div class="d-flex justify-content-between">
-              <strong>{{ event.status }}</strong>
-              <small>{{ event.correlationId }}</small>
-            </div>
-            <div>{{ event.message }}</div>
-            <div *ngIf="event.result" class="mt-2">
-              <strong>結果:</strong> {{ event.result }}
-            </div>
-            <div *ngIf="event.finalEvent" class="mt-2 badge bg-warning text-dark">
-              最終事件
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-    styles: []
+  selector: 'app-task-events',
+  templateUrl: './task-events.component.html',
+  styleUrls: ['./task-events.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class TaskEventsComponent {
-    @Input() events: TaskEvent[] = [];
+export class TaskEventsComponent implements AfterViewChecked, OnChanges {
+  @Input() events: TaskEvent[] = [];
+  @ViewChild('eventsContainer') private eventsContainer!: ElementRef;
+
+  private shouldScrollToBottom = false;
+  private lastEventCount = 0;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['events'] && changes['events'].currentValue.length > this.lastEventCount) {
+      this.shouldScrollToBottom = true;
+      this.lastEventCount = changes['events'].currentValue.length;
+    }
+    if (changes['events'] && changes['events'].currentValue.length === 0) {
+      this.lastEventCount = 0;
+    }
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldScrollToBottom && this.eventsContainer) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
+  private scrollToBottom(): void {
+    try {
+      const element = this.eventsContainer.nativeElement;
+      element.scrollTop = element.scrollHeight;
+    } catch (err) {
+      console.error("無法滾動事件容器:", err);
+    }
+  }
+
+  trackByEventIdentity(index: number, event: TaskEvent): string {
+    return `${event.status}-${event.receivedAt?.getTime()}-${index}`;
+  }
 } 

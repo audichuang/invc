@@ -25,18 +25,18 @@ public class TaskService {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
 
         emitter.onCompletion(() -> {
-            log.info("SSE connection completed for correlationId: {}", correlationId);
+            log.info("關聯 ID 為 {} 的 SSE 連線已完成", correlationId);
             sseEmitterMap.remove(correlationId);
         });
 
         emitter.onTimeout(() -> {
-            log.info("SSE connection timeout for correlationId: {}", correlationId);
+            log.info("關聯 ID 為 {} 的 SSE 連線超時", correlationId);
             sseEmitterMap.remove(correlationId);
             emitter.complete();
         });
 
         emitter.onError(ex -> {
-            log.error("SSE error for correlationId: {}", correlationId, ex);
+            log.error("關聯 ID 為 {} 的 SSE 發生錯誤", correlationId, ex);
             sseEmitterMap.remove(correlationId);
             emitter.complete();
         });
@@ -55,9 +55,9 @@ public class TaskService {
                     .data(connectEvent));
 
             sseEmitterMap.put(correlationId, emitter);
-            log.info("SSE Emitter added to map for correlationId: {}", correlationId);
+            log.info("已為關聯 ID {} 添加 SSE Emitter 到映射中", correlationId);
         } catch (IOException e) {
-            log.error("Error sending initial event to SSE for correlationId: {}", correlationId, e);
+            log.error("向關聯 ID 為 {} 的 SSE 發送初始事件時出錯", correlationId, e);
             emitter.completeWithError(e);
         }
 
@@ -67,7 +67,7 @@ public class TaskService {
     @Async
     public void processTaskAsync(TaskRequest request) {
         String correlationId = request.getCorrelationId();
-        log.info("Processing async task for correlationId: {}", correlationId);
+        log.info("開始處理關聯 ID 為 {} 的異步任務", correlationId);
 
         try {
             // 發布處理中事件
@@ -92,7 +92,7 @@ public class TaskService {
                     .build());
 
         } catch (Exception e) {
-            log.error("Error processing task for correlationId: {}", correlationId, e);
+            log.error("處理關聯 ID 為 {} 的任務時出錯", correlationId, e);
             publishEvent(TaskEvent.builder()
                     .correlationId(correlationId)
                     .status("FAILED")
@@ -117,18 +117,18 @@ public class TaskService {
                     .build());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Subtask interrupted for correlationId: {}", correlationId, e);
+            log.error("關聯 ID 為 {} 的子任務被中斷", correlationId, e);
         }
     }
 
     private void publishEvent(TaskEvent event) {
-        log.info("Publishing event to Kafka: {}", event);
+        log.info("向 Kafka 發布事件: {}", event);
         kafkaTemplate.send(EVENT_TOPIC, event.getCorrelationId(), event);
     }
 
     public void handleEvent(TaskEvent event) {
         String correlationId = event.getCorrelationId();
-        log.info("Handling event for correlationId: {}", correlationId);
+        log.info("處理關聯 ID 為 {} 的事件", correlationId);
 
         SseEmitter emitter = sseEmitterMap.get(correlationId);
         if (emitter != null) {
@@ -140,15 +140,15 @@ public class TaskService {
                 if (event.isFinalEvent()) {
                     emitter.complete();
                     sseEmitterMap.remove(correlationId);
-                    log.info("SSE completed for correlationId: {}", correlationId);
+                    log.info("關聯 ID 為 {} 的 SSE 已完成", correlationId);
                 }
             } catch (IOException e) {
-                log.error("Error sending event to SSE for correlationId: {}", correlationId, e);
+                log.error("向關聯 ID 為 {} 的 SSE 發送事件時出錯", correlationId, e);
                 emitter.completeWithError(e);
                 sseEmitterMap.remove(correlationId);
             }
         } else {
-            log.warn("No SSE emitter found for correlationId: {}", correlationId);
+            log.warn("找不到關聯 ID 為 {} 的 SSE emitter", correlationId);
         }
     }
 }

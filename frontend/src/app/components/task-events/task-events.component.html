@@ -1,0 +1,51 @@
+<div class="card">
+  <div class="card-header bg-success text-white">
+    <h4>事件流</h4>
+  </div>
+  <div class="card-body">
+    <!-- 添加 #eventsContainer 引用 -->
+    <div
+      #eventsContainer
+      class="events-container"
+      style="max-height: 400px; overflow-y: auto"
+    >
+      <div *ngIf="events.length === 0" class="text-center text-muted">
+        尚未收到任何事件
+      </div>
+
+      <!-- 使用 trackBy -->
+      <div
+        *ngFor="let event of events; trackBy: trackByEventIdentity"
+        class="alert event-item"
+        [ngClass]="{
+          'alert-info':
+            event.status === 'CONNECTED' || event.status === 'PROCESSING',
+          'alert-success':
+            event.status === 'COMPLETED' ||
+            event.status === 'SUBTASK_COMPLETED',
+          'alert-danger': event.status === 'FAILED' || event.status === 'ERROR'
+        }"
+      >
+        <div class="d-flex justify-content-between">
+          <strong>{{ event.status }}</strong>
+          <!-- 顯示時間戳，使用 DatePipe 格式化 -->
+          <small class="text-muted">{{
+            event.receivedAt | date : "HH:mm:ss.SSS"
+          }}</small>
+        </div>
+        <div class="message">{{ event.message }}</div>
+        <div *ngIf="event.result" class="mt-2 result">
+          <strong>結果:</strong>
+          <pre>{{ event.result | json }}</pre>
+          <!-- 使用 json pipe 顯示物件結果 -->
+        </div>
+        <div *ngIf="event.finalEvent" class="mt-2 badge bg-warning text-dark">
+          最終事件
+        </div>
+        <small class="correlation-id text-muted">{{
+          event.correlationId
+        }}</small>
+      </div>
+    </div>
+  </div>
+</div>
