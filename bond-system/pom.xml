@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>bond-async</artifactId>
+    <artifactId>bond-system</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>bond-async</name>
-    <description>Bond system with SSE</description>
+    <name>bond-system</name>
+    <description>債卷系統</description>
 
     <properties>
         <java.version>1.8</java.version>
