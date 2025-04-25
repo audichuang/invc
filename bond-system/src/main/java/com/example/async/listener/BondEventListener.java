@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class BondEventListener {
     private final BondService bondService;
 
-    @KafkaListener(topics = "bond-events", groupId = "bond-event-handler")
+    @KafkaListener(topics = "bond-events", groupId = "${spring.kafka.consumer.group-id}")
     public void handleTaskEvent(TaskEvent event) {
         log.info("債券系統 - 收到事件: {}", event);
         bondService.handleEvent(event);

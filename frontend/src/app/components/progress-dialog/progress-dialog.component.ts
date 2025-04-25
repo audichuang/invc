@@ -68,55 +68,47 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
     }
 
     handleTaskEvent(event: TaskEvent): void {
+        console.log('收到事件:', event);
+
         // 判斷事件來源（基金或債券）
-        const eventType = event.correlationId.includes('-fund') ? 'fund' : 'bond';
+        const eventType = event.system || (event.correlationId.includes('-fund') ? 'fund' : 'bond');
+
+        // 找出屬於該系統類型的項目
+        const typeItems = this.itemStatuses.filter(item => item.type === eventType);
 
         // 通用事件處理
-        if (event.status === 'PROCESSING') {
+        if (event.status === 'PROCESSING' || event.status === 'CONNECTED') {
             // 處理中
-            this.itemStatuses
-                .filter(item => item.type === eventType)
-                .forEach(item => {
+            typeItems.forEach(item => {
+                if (item.status === 'pending') {
                     item.status = 'processing';
                     item.message = '處理中...';
-                });
+                }
+            });
         } else if (event.status === 'SUBTASK_COMPLETED') {
-            // 子任務完成，更新特定項目狀態
-            if (event.result) {
-                // 假設result包含項目ID
-                const itemId = this.extractItemId(event.result);
-                const item = this.itemStatuses.find(i => i.id === itemId && i.type === eventType);
+            // 子任務完成，嘗試更新項目狀態
+            // 處理子任務索引
+            const subtaskIndex = this.extractSubtaskIndex(event.message, event.result);
 
+            if (subtaskIndex !== null && subtaskIndex >= 0 && subtaskIndex < typeItems.length) {
+                const item = typeItems[subtaskIndex];
                 if (item) {
                     item.status = 'completed';
                     item.message = '處理完成';
                     this.completedItems++;
                 }
             }
-        } else if (event.status === 'FAILED' || event.status === 'ERROR') {
-            // 處理失敗
-            if (event.result) {
-                // 假設result包含項目ID
-                const itemId = this.extractItemId(event.result);
-                const item = this.itemStatuses.find(i => i.id === itemId && i.type === eventType);
-
-                if (item) {
-                    item.status = 'failed';
-                    item.message = event.message || '處理失敗';
-                    this.failedItems++;
-                }
-            } else {
-                // 整體處理失敗
-                this.itemStatuses
-                    .filter(item => item.type === eventType && item.status === 'pending')
-                    .forEach(item => {
-                        item.status = 'failed';
-                        item.message = event.message || '處理失敗';
-                        this.failedItems++;
-                    });
-            }
         } else if (event.status === 'COMPLETED') {
-            // 所有任務完成，檢查是否可以關閉對話框
+            // 所有任務完成 - 將所有未完成的項目標記為完成
+            typeItems
+                .filter(item => item.status === 'processing' || item.status === 'pending')
+                .forEach(item => {
+                    item.status = 'completed';
+                    item.message = '處理完成';
+                    this.completedItems++;
+                });
+
+            // 檢查是否可以關閉對話框
             const allTasksCompleted = this.itemStatuses.every(
                 item => item.status === 'completed' || item.status === 'failed'
             );
@@ -124,6 +116,15 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
             if (allTasksCompleted) {
                 this.dialogRef.disableClose = false;
             }
+        } else if (event.status === 'FAILED' || event.status === 'ERROR') {
+            // 處理失敗
+            typeItems
+                .filter(item => item.status !== 'completed')
+                .forEach(item => {
+                    item.status = 'failed';
+                    item.message = event.message || '處理失敗';
+                    this.failedItems++;
+                });
         }
     }
 
@@ -155,13 +156,32 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
         }
     }
 
-    private extractItemId(result: any): string {
-        // 根據實際API返回格式調整
-        if (typeof result === 'string' && result.includes('子任務')) {
-            // 範例: '子任務 1 的結果'，提取數字1作為ID
-            const match = result.match(/子任務\s+(\d+)\s+的結果/);
-            return match ? match[1] : '';
+    private extractSubtaskIndex(message: string, result: any): number | null {
+        console.log('嘗試解析子任務索引:', message, result);
+
+        // 嘗試從消息中解析子任務索引
+        if (typeof message === 'string') {
+            // 匹配 "債券子任務 0 已完成" 或 "子任務 0 的結果" 格式
+            const bondMatch = message.match(/債券子任務\s+(\d+)\s+已完成/);
+            const fundMatch = message.match(/子任務\s+(\d+)/);
+
+            if (bondMatch && bondMatch[1]) {
+                return parseInt(bondMatch[1], 10);
+            }
+
+            if (fundMatch && fundMatch[1]) {
+                return parseInt(fundMatch[1], 10);
+            }
         }
-        return '';
+
+        // 嘗試從結果中解析子任務索引
+        if (typeof result === 'string') {
+            const resultMatch = result.match(/子任務\s+(\d+)\s+的結果/);
+            if (resultMatch && resultMatch[1]) {
+                return parseInt(resultMatch[1], 10);
+            }
+        }
+
+        return null;
     }
 } 

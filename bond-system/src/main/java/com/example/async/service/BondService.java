@@ -129,8 +129,12 @@ public class BondService {
     }
 
     private void publishEvent(TaskEvent event) {
-        log.info("債券系統 - 向 Kafka 發布事件: {}", event);
-        kafkaTemplate.send(EVENT_TOPIC, event.getCorrelationId(), event);
+        try {
+            log.info("債券系統 - 向 Kafka 發布事件: {}", event);
+            kafkaTemplate.send(EVENT_TOPIC, event.getCorrelationId(), event);
+        } catch (Exception e) {
+            log.error("債券系統 - 發布事件到 Kafka 失敗: {}", e.getMessage(), e);
+        }
     }
 
     public void handleEvent(TaskEvent event) {
