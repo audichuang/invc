@@ -1,0 +1,51 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: bond-proxy
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: bond-service-route
+          uri: lb://bond-service
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: RequestSize
+              args:
+                maxSize: 5MB
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+    loadbalancer:
+      configurations: default
+      ribbon:
+        enabled: false
+    discovery:
+      client:
+        simple:
+          instances:
+            bond-service:
+              - instanceId: bond-service-1
+                uri: http://localhost:9098
+              - instanceId: bond-service-2
+                uri: http://localhost:9099
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: INFO
+    com.example.proxy: DEBUG

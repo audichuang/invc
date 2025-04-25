@@ -5,3 +5,48 @@ body {
   margin: 0;
   padding: 0;
 } 
+
+/* 對話框全域居中樣式 - 簡化版 */
+.centered-dialog .mat-dialog-container {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* 強制對話框居中 */
+.cdk-overlay-container {
+  z-index: 1000;
+}
+
+.cdk-overlay-pane {
+  margin: auto !important;
+  position: relative !important;
+}
+
+.cdk-global-overlay-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  pointer-events: auto;
+  width: 100%;
+  height: 100%;
+}
+
+/* 新增特定的對話框居中類 */
+.mat-dialog-center-position {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* 修正圖標問題 */
+.mat-icon {
+  height: 24px !important;
+  width: 24px !important;
+  font-size: 24px !important;
+  line-height: 24px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+} 

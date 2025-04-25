@@ -1,0 +1,68 @@
+<div class="fund-bond-table-container mat-elevation-z8">
+  <h2>基金與債券產品選擇</h2>
+
+  <div class="table-operations">
+    <mat-checkbox
+      [checked]="isAllSelected()"
+      [indeterminate]="isSomeSelected()"
+      (change)="selectAll($event)"
+    >
+      全選
+    </mat-checkbox>
+
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="submitSelection()"
+      [disabled]="selection.length === 0"
+    >
+      提交選擇 (已選 {{ selection.length }} 項)
+    </button>
+  </div>
+
+  <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+    <!-- 選擇列 -->
+    <ng-container matColumnDef="select">
+      <th mat-header-cell *matHeaderCellDef>選擇</th>
+      <td mat-cell *matCellDef="let item">
+        <mat-checkbox
+          [checked]="item.selected"
+          (change)="toggleSelection(item, $event)"
+        >
+        </mat-checkbox>
+      </td>
+    </ng-container>
+
+    <!-- 名稱列 -->
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>產品名稱</th>
+      <td mat-cell *matCellDef="let item">{{ item.name }}</td>
+    </ng-container>
+
+    <!-- 類型列 -->
+    <ng-container matColumnDef="type">
+      <th mat-header-cell *matHeaderCellDef>類型</th>
+      <td mat-cell *matCellDef="let item">
+        <span
+          class="type-badge"
+          [ngClass]="{ fund: item.type === 'fund', bond: item.type === 'bond' }"
+        >
+          {{ item.type === "fund" ? "基金" : "債券" }}
+        </span>
+      </td>
+    </ng-container>
+
+    <!-- 代碼列 -->
+    <ng-container matColumnDef="code">
+      <th mat-header-cell *matHeaderCellDef>產品代碼</th>
+      <td mat-cell *matCellDef="let item">{{ item.code }}</td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr
+      mat-row
+      *matRowDef="let row; columns: displayedColumns"
+      [class.selected-row]="row.selected"
+    ></tr>
+  </table>
+</div>

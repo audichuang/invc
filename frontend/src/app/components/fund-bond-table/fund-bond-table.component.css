@@ -1,0 +1,41 @@
+.fund-bond-table-container {
+  padding: 20px;
+  margin: 20px;
+}
+
+.table-operations {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+table {
+  width: 100%;
+}
+
+.selected-row {
+  background-color: rgba(0, 0, 255, 0.05);
+}
+
+.type-badge {
+  padding: 5px 10px;
+  border-radius: 16px;
+  color: white;
+  font-weight: 500;
+  font-size: 0.8em;
+  text-transform: uppercase;
+}
+
+.type-badge.fund {
+  background-color: #1976d2;
+}
+
+.type-badge.bond {
+  background-color: #ff9800;
+}
+
+.mat-mdc-row:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+} 
