@@ -9,10 +9,10 @@
         <relativePath/>
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>async-sse-demo</artifactId>
+    <artifactId>fund-system</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>async-sse-demo</name>
-    <description>Demo project for Spring Boot with SSE and Kafka</description>
+    <name>fund-system</name>
+    <description>fund-system</description>
     
     <properties>
         <java.version>17</java.version>

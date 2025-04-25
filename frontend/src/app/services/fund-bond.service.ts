@@ -29,7 +29,7 @@ export class FundBondService {
             correlationId: request.correlationId,
             taskName: request.taskName,
             numberOfSubtasks: request.numberOfSubtasks,
-            items: request.items
+            // items: request.items
         }, {
             responseType: 'text' as 'json'
         });
@@ -43,7 +43,7 @@ export class FundBondService {
             correlationId: request.correlationId,
             taskName: request.taskName,
             numberOfSubtasks: request.numberOfSubtasks,
-            items: request.items
+            // items: request.items
         }, {
             responseType: 'text' as 'json'
         });

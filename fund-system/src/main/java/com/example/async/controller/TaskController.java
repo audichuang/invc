@@ -26,7 +26,7 @@ public class TaskController {
                 .body("任務已啟動，關聯 ID: " + taskRequest.getCorrelationId());
     }
 
-    @GetMapping(value = "/events/{correlationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/fund-events/{correlationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeToEvents(@PathVariable String correlationId) {
         log.info("為關聯 ID {} 建立 SSE 連線", correlationId);
         return taskService.createSseEmitter(correlationId);

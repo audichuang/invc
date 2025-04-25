@@ -63,7 +63,7 @@ export class TaskService {
         const apiUrl = system === 'fund' ? this.fundApiUrl : this.bondApiUrl;
 
         // 使用正確的事件端點
-        const eventsEndpoint = system === 'fund' ? 'events' : 'bond-events';
+        const eventsEndpoint = system === 'fund' ? 'fund-events' : 'bond-events';
 
         // 建立新的 SSE 連接
         const eventSource = new EventSource(`${apiUrl}/${eventsEndpoint}/${correlationId}`);
