@@ -28,7 +28,8 @@ export class FundBondService {
         return this.http.post<string>(`${this.fundApiUrl}/first-api`, {
             correlationId: request.correlationId,
             taskName: request.taskName,
-            numberOfSubtasks: request.numberOfSubtasks
+            numberOfSubtasks: request.numberOfSubtasks,
+            items: request.items
         }, {
             responseType: 'text' as 'json'
         });
@@ -41,7 +42,8 @@ export class FundBondService {
         return this.http.post<string>(`${this.bondApiUrl}/bond-api`, {
             correlationId: request.correlationId,
             taskName: request.taskName,
-            numberOfSubtasks: request.numberOfSubtasks
+            numberOfSubtasks: request.numberOfSubtasks,
+            items: request.items
         }, {
             responseType: 'text' as 'json'
         });

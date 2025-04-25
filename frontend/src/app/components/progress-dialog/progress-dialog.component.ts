@@ -77,64 +77,78 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
         // 判斷事件來源（基金或債券）
         const eventType = event.system || (event.correlationId.includes('-fund') ? 'fund' : 'bond');
 
-        // 找出屬於該系統類型的項目
-        const typeItems = this.itemStatuses.filter(item => item.type === eventType);
+        // 檢查是否這是特定項目的事件還是一般事件
+        // 從correlationId中提取項目索引，例如: "xyz-fund-0" 中的0
+        const itemIndexMatch = event.correlationId.match(/-(fund|bond)-(\d+)$/);
 
-        if (typeItems.length === 0) {
-            return; // 沒有匹配的項目，不處理
+        if (itemIndexMatch && itemIndexMatch[2]) {
+            // 這是針對特定項目的事件
+            const type = itemIndexMatch[1] as 'fund' | 'bond'; // 'fund' 或 'bond'
+            const itemIndex = parseInt(itemIndexMatch[2]);
+
+            // 找出屬於該類型的所有項目
+            const typeItems = this.itemStatuses.filter(item => item.type === type);
+
+            // 確保索引在有效範圍內
+            if (itemIndex >= 0 && itemIndex < typeItems.length) {
+                const item = typeItems[itemIndex];
+
+                // 根據事件狀態更新項目
+                this.updateItemStatus(item, event);
+            }
+            return;
         }
 
-        // 通用事件處理
-        if (event.status === 'PROCESSING' || event.status === 'CONNECTED') {
-            // 處理中
-            typeItems.forEach(item => {
-                if (item.status === 'pending') {
-                    item.status = 'processing';
-                    item.message = '處理中...';
-                }
-            });
-        } else if (event.status === 'SUBTASK_COMPLETED') {
-            // 子任務完成，嘗試更新項目狀態
-            const subtaskIndex = this.extractSubtaskIndex(event.message, event.result);
+        // 這是整體事件（或無法識別的項目事件）
+        // 找出受影響的所有項目
+        const affectedItems = this.itemStatuses.filter(item =>
+            item.type === eventType
+        );
 
-            if (subtaskIndex !== null && subtaskIndex >= 0 && subtaskIndex < typeItems.length) {
-                const item = typeItems[subtaskIndex];
-                if (item) {
-                    item.status = 'completed';
-                    item.message = '處理完成';
-                    this.completedItems++;
-                }
-            }
-        } else if (event.status === 'COMPLETED') {
-            // 所有任務完成 - 將所有未完成的項目標記為完成
-            let newCompleted = 0;
-            typeItems
-                .filter(item => item.status === 'processing' || item.status === 'pending')
-                .forEach(item => {
-                    item.status = 'completed';
-                    item.message = '處理完成';
-                    newCompleted++;
-                });
+        if (affectedItems.length === 0) return;
 
-            this.completedItems += newCompleted;
-
-            // 檢查是否可以關閉對話框
-            this.checkAllCompleted();
-        } else if (event.status === 'FAILED' || event.status === 'ERROR') {
-            // 處理失敗
+        // 處理整體連接事件
+        if (event.status === 'CONNECTED') {
+            console.log(`${eventType}系統已連接`);
+        }
+        // 處理通用錯誤事件
+        else if (event.status === 'ERROR' || event.status === 'FAILED') {
+            // 將所有待處理的項目設置為失敗
             let newFailed = 0;
-            typeItems
-                .filter(item => item.status !== 'completed')
+            affectedItems
+                .filter(item => item.status !== 'completed' && item.status !== 'failed')
                 .forEach(item => {
                     item.status = 'failed';
-                    item.message = event.message || '處理失敗';
+                    item.message = event.message || `${eventType}系統錯誤`;
                     newFailed++;
                 });
 
             this.failedItems += newFailed;
-
-            // 檢查是否可以關閉對話框
             this.checkAllCompleted();
+        }
+    }
+
+    // 更新單個項目的狀態
+    private updateItemStatus(item: ProcessStatus, event: TaskEvent): void {
+        if (event.status === 'PROCESSING' || event.status === 'CONNECTED') {
+            if (item.status === 'pending') {
+                item.status = 'processing';
+                item.message = '處理中...';
+            }
+        } else if (event.status === 'COMPLETED') {
+            if (item.status !== 'completed') {
+                item.status = 'completed';
+                item.message = event.message || '處理完成';
+                this.completedItems++;
+                this.checkAllCompleted();
+            }
+        } else if (event.status === 'FAILED' || event.status === 'ERROR') {
+            if (item.status !== 'failed') {
+                item.status = 'failed';
+                item.message = event.message || '處理失敗';
+                this.failedItems++;
+                this.checkAllCompleted();
+            }
         }
     }
 
@@ -173,35 +187,5 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
         if (allTasksCompleted) {
             this.dialogRef.close();
         }
-    }
-
-    private extractSubtaskIndex(message: string, result: any): number | null {
-        console.log('嘗試解析子任務索引:', message, result);
-
-        // 嘗試從消息中解析子任務索引
-        if (typeof message === 'string') {
-            // 匹配 "債券子任務 0 已完成" 或 "子任務 0 的結果" 格式
-            const bondMatch = message.match(/債券子任務\s+(\d+)\s+已完成/);
-            const fundMatch = message.match(/子任務\s+(\d+)/);
-
-            if (bondMatch && bondMatch[1]) {
-                return parseInt(bondMatch[1], 10);
-            }
-
-            if (fundMatch && fundMatch[1]) {
-                return parseInt(fundMatch[1], 10);
-            }
-        }
-
-        // 嘗試從結果中解析子任務索引
-        if (typeof result === 'string') {
-            const resultMatch = result.match(/子任務\s+(\d+)\s+的結果/);
-            if (resultMatch && resultMatch[1]) {
-                return parseInt(resultMatch[1], 10);
-            }
-        }
-
-        // 如果無法解析具體索引，則使用第一個未完成的項目
-        return 0;
     }
 } 

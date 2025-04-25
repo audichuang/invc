@@ -66,8 +66,10 @@ export class FundBondTableComponent implements OnInit {
         const fundItems = this.selection.filter(item => item.type === 'fund');
         const bondItems = this.selection.filter(item => item.type === 'bond');
 
-        // 生成唯一的correlationId
+        // 生成唯一的correlationId (作為整個處理流程的ID)
         const correlationId = this.taskService.generateCorrelationId();
+        const fundSseId = correlationId + '-fund';
+        const bondSseId = correlationId + '-bond';
 
         // 打開不可關閉的進度彈窗
         const dialogRef = this.dialog.open(ProgressDialogComponent, {
@@ -84,51 +86,69 @@ export class FundBondTableComponent implements OnInit {
             }
         });
 
-        // 向基金系統發送請求
+        // 先為每種類型建立SSE連接（如果有相應類型的項目）
         if (fundItems.length > 0) {
+            this.taskService.connectToEventStream(fundSseId, 'fund');
+            console.log('建立基金SSE連接:', fundSseId);
+        }
+
+        if (bondItems.length > 0) {
+            this.taskService.connectToEventStream(bondSseId, 'bond');
+            console.log('建立債券SSE連接:', bondSseId);
+        }
+
+        // 對於基金項目，每個項目分別發送請求
+        fundItems.forEach((item, index) => {
+            const itemId = `${correlationId}-fund-${index}`;
             const fundRequest = {
-                correlationId: correlationId + '-fund',
-                taskName: '基金處理',
-                numberOfSubtasks: fundItems.length,
-                items: fundItems.map(item => item.id)
+                correlationId: itemId,
+                taskName: `基金處理-${item.name}`,
+                numberOfSubtasks: 1,
+                items: [item.id]
             };
 
             this.fundBondService.initiateFundTask(fundRequest).subscribe({
-                next: (response) => {
-                    console.log('基金請求已發送:', response);
-                    // 連接基金SSE
-                    this.taskService.connectToEventStream(correlationId + '-fund', 'fund');
+                next: (response: string) => {
+                    console.log(`基金${item.name}請求已發送:`, response);
                 },
-                error: (error) => {
-                    console.error('基金請求失敗:', error);
-                    // 通知彈窗錯誤
-                    this.fundBondService.notifyError(correlationId + '-fund', '基金請求失敗');
+                error: (error: any) => {
+                    console.error(`基金${item.name}請求失敗:`, error);
+                    this.fundBondService.notifyError(itemId, `基金${item.name}請求失敗`);
                 }
             });
-        }
+        });
 
-        // 向債券系統發送請求
-        if (bondItems.length > 0) {
+        // 對於債券項目，每個項目分別發送請求
+        bondItems.forEach((item, index) => {
+            const itemId = `${correlationId}-bond-${index}`;
             const bondRequest = {
-                correlationId: correlationId + '-bond',
-                taskName: '債券處理',
-                numberOfSubtasks: bondItems.length,
-                items: bondItems.map(item => item.id)
+                correlationId: itemId,
+                taskName: `債券處理-${item.name}`,
+                numberOfSubtasks: 1,
+                items: [item.id]
             };
 
             this.fundBondService.initiateBondTask(bondRequest).subscribe({
-                next: (response) => {
-                    console.log('債券請求已發送:', response);
-                    // 連接債券SSE
-                    this.taskService.connectToEventStream(correlationId + '-bond', 'bond');
+                next: (response: string) => {
+                    console.log(`債券${item.name}請求已發送:`, response);
                 },
-                error: (error) => {
-                    console.error('債券請求失敗:', error);
-                    // 通知彈窗錯誤
-                    this.fundBondService.notifyError(correlationId + '-bond', '債券請求失敗');
+                error: (error: any) => {
+                    console.error(`債券${item.name}請求失敗:`, error);
+                    this.fundBondService.notifyError(itemId, `債券${item.name}請求失敗`);
                 }
             });
-        }
+        });
+
+        // 監聽對話框關閉事件，確保在對話框關閉時斷開所有SSE連接
+        dialogRef.afterClosed().subscribe(() => {
+            console.log('對話框已關閉，斷開SSE連接');
+            if (fundItems.length > 0) {
+                this.taskService.disconnectEventStream(fundSseId);
+            }
+            if (bondItems.length > 0) {
+                this.taskService.disconnectEventStream(bondSseId);
+            }
+        });
     }
 
     selectAll(event: MatCheckboxChange): void {
