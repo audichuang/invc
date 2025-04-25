@@ -12,6 +12,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,7 +25,10 @@ import java.util.regex.Pattern;
 public class TaskService {
     private final KafkaTemplate<String, TaskEvent> kafkaTemplate;
     private final Map<String, SseEmitter> sseEmitterMap = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledFuture<?>> heartbeatFutureMap = new ConcurrentHashMap<>();
     private static final String EVENT_TOPIC = "task-events";
+    private static final ScheduledExecutorService HEARTBEAT_SCHEDULER = Executors.newScheduledThreadPool(2);
+    private static final long HEARTBEAT_INTERVAL_SECONDS = 10;
 
     // 用於提取基本correlationId的正則表達式
     private static final Pattern CORRELATION_ID_PATTERN = Pattern.compile("^(.*?)-\\d+$");
@@ -32,17 +39,20 @@ public class TaskService {
         emitter.onCompletion(() -> {
             log.info("關聯 ID 為 {} 的 SSE 連線已完成", correlationId);
             sseEmitterMap.remove(correlationId);
+            stopHeartbeat(correlationId);
         });
 
         emitter.onTimeout(() -> {
             log.info("關聯 ID 為 {} 的 SSE 連線超時", correlationId);
             sseEmitterMap.remove(correlationId);
+            stopHeartbeat(correlationId);
             emitter.complete();
         });
 
         emitter.onError(ex -> {
             log.error("關聯 ID 為 {} 的 SSE 發生錯誤", correlationId, ex);
             sseEmitterMap.remove(correlationId);
+            stopHeartbeat(correlationId);
             emitter.complete();
         });
 
@@ -60,13 +70,62 @@ public class TaskService {
                     .data(connectEvent));
 
             sseEmitterMap.put(correlationId, emitter);
+            startHeartbeat(correlationId);
             log.info("已為關聯 ID {} 添加 SSE Emitter 到映射中", correlationId);
         } catch (IOException e) {
             log.error("向關聯 ID 為 {} 的 SSE 發送初始事件時出錯", correlationId, e);
+            stopHeartbeat(correlationId);
             emitter.completeWithError(e);
         }
 
         return emitter;
+    }
+
+    private void startHeartbeat(String correlationId) {
+        log.info("啟動心跳機制，關聯 ID: {}, 心跳間隔: {}秒", correlationId, HEARTBEAT_INTERVAL_SECONDS);
+
+        ScheduledFuture<?> future = HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
+            SseEmitter emitter = sseEmitterMap.get(correlationId);
+            if (emitter != null) {
+                try {
+                    log.info("發送心跳到 SSE 連線，關聯 ID: {}", correlationId);
+                    TaskEvent heartbeatEvent = TaskEvent.builder()
+                            .correlationId(correlationId)
+                            .status("HEARTBEAT")
+                            .message("基金系統心跳檢測")
+                            .finalEvent(false)
+                            .build();
+
+                    // 直接發送心跳事件
+                    emitter.send(SseEmitter.event()
+                            .id(String.valueOf(System.currentTimeMillis()))
+                            .name("HEARTBEAT")
+                            .data(heartbeatEvent)
+                            .reconnectTime(0));
+
+                    log.info("心跳事件已發送，關聯 ID: {}", correlationId);
+                } catch (IOException e) {
+                    log.error("發送心跳到關聯 ID 為 {} 的 SSE 時出錯: {}", correlationId, e.getMessage());
+                    stopHeartbeat(correlationId);
+                    sseEmitterMap.remove(correlationId);
+                    emitter.completeWithError(e);
+                }
+            } else {
+                // 如果emitter不存在，則停止心跳
+                log.info("找不到關聯 ID 為 {} 的 SSE emitter，停止心跳", correlationId);
+                stopHeartbeat(correlationId);
+            }
+        }, 2, HEARTBEAT_INTERVAL_SECONDS, TimeUnit.SECONDS); // 2秒後開始，然後每10秒一次
+
+        heartbeatFutureMap.put(correlationId, future);
+    }
+
+    private void stopHeartbeat(String correlationId) {
+        ScheduledFuture<?> future = heartbeatFutureMap.remove(correlationId);
+        if (future != null) {
+            future.cancel(false);
+            log.info("已停止關聯 ID 為 {} 的心跳", correlationId);
+        }
     }
 
     @Async
@@ -85,6 +144,7 @@ public class TaskService {
 
             // 執行子任務
             for (int i = 0; i < request.getNumberOfSubtasks(); i++) {
+                Thread.sleep(22000);
                 executeSubtask(correlationId, i);
             }
 
@@ -171,24 +231,28 @@ public class TaskService {
                         .data(event));
 
                 if (event.isFinalEvent()) {
-                    emitter.complete();
-                    // 根據實際使用的ID移除
+                    // 完成連接前先停止心跳
                     if (sseEmitterMap.containsKey(baseCorrelationId)) {
+                        stopHeartbeat(baseCorrelationId);
                         sseEmitterMap.remove(baseCorrelationId);
                         log.info("關聯 ID 為 {} 的 SSE 已完成", baseCorrelationId);
                     } else if (sseEmitterMap.containsKey(correlationId)) {
+                        stopHeartbeat(correlationId);
                         sseEmitterMap.remove(correlationId);
                         log.info("關聯 ID 為 {} 的 SSE 已完成", correlationId);
                     }
+                    emitter.complete();
                 }
             } catch (IOException e) {
                 log.error("向 SSE 發送事件時出錯", e);
-                emitter.completeWithError(e);
                 if (sseEmitterMap.containsKey(baseCorrelationId)) {
+                    stopHeartbeat(baseCorrelationId);
                     sseEmitterMap.remove(baseCorrelationId);
                 } else if (sseEmitterMap.containsKey(correlationId)) {
+                    stopHeartbeat(correlationId);
                     sseEmitterMap.remove(correlationId);
                 }
+                emitter.completeWithError(e);
             }
         } else {
             log.warn("找不到關聯 ID 為 {} 或基本ID {} 的 SSE emitter", correlationId, baseCorrelationId);

@@ -28,6 +28,7 @@ export class TaskService {
     private eventSubject = new Subject<TaskEvent>();
     public events$ = this.eventSubject.asObservable();
     private eventSources: Map<string, EventSource> = new Map(); // 存儲多個SSE連接
+    private lastHeartbeatTime: Map<string, Date> = new Map(); // 存儲每個連接的最後心跳時間
 
     constructor(private http: HttpClient) { }
 
@@ -68,6 +69,7 @@ export class TaskService {
         // 建立新的 SSE 連接
         const eventSource = new EventSource(`${apiUrl}/${eventsEndpoint}/${correlationId}`);
         this.eventSources.set(correlationId, eventSource);
+        this.lastHeartbeatTime.set(correlationId, new Date());
 
         // Helper function to process and add timestamp
         const processEvent = (eventData: string, eventName?: string) => {
@@ -75,6 +77,14 @@ export class TaskService {
                 const taskEvent: TaskEvent = JSON.parse(eventData);
                 taskEvent.receivedAt = new Date();
                 taskEvent.system = system; // 添加系統標識
+
+                // 特殊處理心跳事件
+                if (eventName === 'HEARTBEAT') {
+                    this.lastHeartbeatTime.set(correlationId, new Date());
+                    console.log(`收到 ${system} 系統心跳事件:`, taskEvent);
+                    return; // 不轉發心跳事件給其他訂閱者
+                }
+
                 console.log(`收到 ${system} 系統 SSE 事件 (${eventName || 'message'}):`, taskEvent);
                 this.eventSubject.next(taskEvent);
 
@@ -105,6 +115,8 @@ export class TaskService {
         eventSource.addEventListener('SUBTASK_COMPLETED', (event: any) => processEvent(event.data, 'SUBTASK_COMPLETED'));
         eventSource.addEventListener('COMPLETED', (event: any) => processEvent(event.data, 'COMPLETED'));
         eventSource.addEventListener('FAILED', (event: any) => processEvent(event.data, 'FAILED'));
+        eventSource.addEventListener('HEARTBEAT', (event: any) => processEvent(event.data, 'HEARTBEAT'));
+        eventSource.addEventListener('BATCH_COMPLETED', (event: any) => processEvent(event.data, 'BATCH_COMPLETED'));
 
         eventSource.onerror = (error) => {
             console.error(`${system} 系統 SSE 連接錯誤:`, error);
@@ -118,6 +130,29 @@ export class TaskService {
                 system
             });
         };
+
+        console.log(`${system} 系統 SSE 連接已建立 (${correlationId})`);
+    }
+
+    /**
+     * 檢查連接健康狀態
+     * @param correlationId 關聯ID
+     * @returns 如果最後一次心跳在30秒內，返回true
+     */
+    isConnectionHealthy(correlationId: string): boolean {
+        const lastHeartbeat = this.lastHeartbeatTime.get(correlationId);
+        if (!lastHeartbeat) return false;
+
+        const now = new Date();
+        const diff = now.getTime() - lastHeartbeat.getTime();
+        return diff < 30000; // 30秒內有心跳
+    }
+
+    /**
+     * 取得最後一次心跳時間
+     */
+    getLastHeartbeatTime(correlationId: string): Date | undefined {
+        return this.lastHeartbeatTime.get(correlationId);
     }
 
     /**
@@ -128,6 +163,7 @@ export class TaskService {
         if (eventSource) {
             eventSource.close();
             this.eventSources.delete(correlationId);
+            this.lastHeartbeatTime.delete(correlationId);
             console.log(`SSE 連接 ${correlationId} 已關閉`);
         }
     }
@@ -141,5 +177,6 @@ export class TaskService {
             console.log(`SSE 連接 ${id} 已關閉`);
         });
         this.eventSources.clear();
+        this.lastHeartbeatTime.clear();
     }
 } 
