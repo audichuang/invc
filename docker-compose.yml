@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # 反向代理
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend/dist:/usr/share/nginx/html
+    depends_on:
+      - fund-service
+      - bond-service
+      - kafka
+      - zookeeper
+    networks:
+      - app-network
+
+  # 基金系統服務 (雙pod)
+  fund-service-1:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SERVER_PORT=8080
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+
+  fund-service-2:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SERVER_PORT=8080
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+
+  # 債券系統服務 (雙pod)
+  bond-service-1:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SERVER_PORT=8080
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+
+  bond-service-2:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SERVER_PORT=8080
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - app-network
+    deploy:
+      replicas: 1
+
+  # 負載均衡器 - 用於基金服務
+  fund-service:
+    image: haproxy:latest
+    volumes:
+      - ./haproxy-fund.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    depends_on:
+      - fund-service-1
+      - fund-service-2
+    networks:
+      - app-network
+
+  # 負載均衡器 - 用於債券服務
+  bond-service:
+    image: haproxy:latest
+    volumes:
+      - ./haproxy-bond.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    depends_on:
+      - bond-service-1
+      - bond-service-2
+    networks:
+      - app-network
+
+  # Kafka用於消息傳遞
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    ports:
+      - "2181:2181"
+    networks:
+      - app-network
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_CREATE_TOPICS: "task-events:1:1,bond-events:1:1"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 

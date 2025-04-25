@@ -1,0 +1,91 @@
+<div class="progress-dialog">
+  <h2 mat-dialog-title>處理進度</h2>
+
+  <div mat-dialog-content>
+    <div class="progress-summary">
+      <mat-progress-bar
+        mode="determinate"
+        [value]="getProgressPercentage()"
+      ></mat-progress-bar>
+      <div class="progress-text">
+        <span>總計: {{ totalItems }} 項</span>
+        <span>已完成: {{ completedItems }} 項</span>
+        <span>失敗: {{ failedItems }} 項</span>
+        <span>進度: {{ getProgressPercentage() }}%</span>
+      </div>
+    </div>
+
+    <div class="status-table-container">
+      <table mat-table [dataSource]="itemStatuses" class="mat-elevation-z8">
+        <!-- 名稱列 -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>產品名稱</th>
+          <td mat-cell *matCellDef="let item">{{ item.name }}</td>
+        </ng-container>
+
+        <!-- 類型列 -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>類型</th>
+          <td mat-cell *matCellDef="let item">
+            <span
+              class="type-badge"
+              [ngClass]="{
+                fund: item.type === 'fund',
+                bond: item.type === 'bond'
+              }"
+            >
+              {{ item.type === "fund" ? "基金" : "債券" }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- 代碼列 -->
+        <ng-container matColumnDef="code">
+          <th mat-header-cell *matHeaderCellDef>產品代碼</th>
+          <td mat-cell *matCellDef="let item">{{ item.code }}</td>
+        </ng-container>
+
+        <!-- 狀態列 -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>處理狀態</th>
+          <td mat-cell *matCellDef="let item">
+            <div
+              class="status-container"
+              [ngClass]="getStatusClass(item.status)"
+            >
+              <mat-icon *ngIf="item.status === 'completed'"
+                >check_circle</mat-icon
+              >
+              <mat-icon *ngIf="item.status === 'failed'">error</mat-icon>
+              <mat-spinner
+                *ngIf="item.status === 'processing'"
+                diameter="20"
+              ></mat-spinner>
+              <mat-icon *ngIf="item.status === 'pending'"
+                >hourglass_empty</mat-icon
+              >
+              <span>{{ item.message }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr
+          mat-header-row
+          *matHeaderRowDef="displayedColumns; sticky: true"
+        ></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+  </div>
+
+  <div mat-dialog-actions align="end">
+    <button
+      mat-raised-button
+      color="primary"
+      [disabled]="!allTasksCompleted()"
+      (click)="closeDialog()"
+    >
+      關閉
+    </button>
+  </div>
+</div>

@@ -4,8 +4,8 @@ import { TaskService, TaskRequest, TaskEvent } from '../../services/task.service
 import { Subscription } from 'rxjs';
 
 @Component({
-    selector: 'app-task-form',
-    template: `
+  selector: 'app-task-form',
+  template: `
     <div class="row">
       <div class="col-md-6">
         <div class="card">
@@ -43,79 +43,81 @@ import { Subscription } from 'rxjs';
       </div>
     </div>
   `,
-    styles: []
+  styles: []
 })
 export class TaskFormComponent implements OnInit, OnDestroy {
-    taskForm: FormGroup;
-    isLoading = false;
-    eventsList: TaskEvent[] = [];
-    currentCorrelationId: string = '';
-    private subscription: Subscription = new Subscription();
+  taskForm: FormGroup;
+  isLoading = false;
+  eventsList: TaskEvent[] = [];
+  currentCorrelationId: string = '';
+  private subscription: Subscription = new Subscription();
 
-    constructor(
-        private fb: FormBuilder,
-        private taskService: TaskService
-    ) {
-        this.taskForm = this.fb.group({
-            taskName: ['', [Validators.required]],
-            numberOfSubtasks: [3, [Validators.required, Validators.min(1), Validators.max(10)]]
-        });
-    }
+  constructor(
+    private fb: FormBuilder,
+    private taskService: TaskService
+  ) {
+    this.taskForm = this.fb.group({
+      taskName: ['', [Validators.required]],
+      numberOfSubtasks: [3, [Validators.required, Validators.min(1), Validators.max(10)]]
+    });
+  }
 
-    ngOnInit(): void {
-        this.subscription.add(
-            this.taskService.events$.subscribe(event => {
-                console.log('收到事件:', event);
-                this.eventsList = [...this.eventsList, event];
+  ngOnInit(): void {
+    this.subscription.add(
+      this.taskService.events$.subscribe(event => {
+        console.log('收到事件:', event);
+        this.eventsList = [...this.eventsList, event];
 
-                if (event.finalEvent) {
-                    this.isLoading = false;
-                }
-            })
-        );
-    }
-
-    ngOnDestroy(): void {
-        this.subscription.unsubscribe();
-        this.taskService.disconnectEventStream();
-    }
-
-    startTask(): void {
-        if (this.taskForm.valid) {
-            this.isLoading = true;
-            this.eventsList = [];
-
-            // 產生新的 correlationId
-            this.currentCorrelationId = this.taskService.generateCorrelationId();
-
-            const request: TaskRequest = {
-                correlationId: this.currentCorrelationId,
-                taskName: this.taskForm.get('taskName')?.value,
-                numberOfSubtasks: this.taskForm.get('numberOfSubtasks')?.value
-            };
-
-            console.log('發起任務請求:', request);
-
-            // 建立 SSE 連接
-            this.taskService.connectToEventStream(this.currentCorrelationId);
-
-            // 發起任務請求
-            this.taskService.initiateTask(request).subscribe({
-                next: (response) => {
-                    console.log('任務請求成功:', response);
-                },
-                error: (error) => {
-                    console.error('任務請求失敗:', error);
-                    this.isLoading = false;
-                    this.eventsList.push({
-                        correlationId: this.currentCorrelationId,
-                        status: 'ERROR',
-                        message: '任務請求失敗: ' + (error.message || JSON.stringify(error)),
-                        finalEvent: true
-                    });
-                    this.taskService.disconnectEventStream();
-                }
-            });
+        if (event.finalEvent) {
+          this.isLoading = false;
         }
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+    if (this.currentCorrelationId) {
+      this.taskService.disconnectEventStream(this.currentCorrelationId);
     }
+  }
+
+  startTask(): void {
+    if (this.taskForm.valid) {
+      this.isLoading = true;
+      this.eventsList = [];
+
+      // 產生新的 correlationId
+      this.currentCorrelationId = this.taskService.generateCorrelationId();
+
+      const request: TaskRequest = {
+        correlationId: this.currentCorrelationId,
+        taskName: this.taskForm.get('taskName')?.value,
+        numberOfSubtasks: this.taskForm.get('numberOfSubtasks')?.value
+      };
+
+      console.log('發起任務請求:', request);
+
+      // 建立 SSE 連接
+      this.taskService.connectToEventStream(this.currentCorrelationId);
+
+      // 發起任務請求
+      this.taskService.initiateTask(request).subscribe({
+        next: (response) => {
+          console.log('任務請求成功:', response);
+        },
+        error: (error) => {
+          console.error('任務請求失敗:', error);
+          this.isLoading = false;
+          this.eventsList.push({
+            correlationId: this.currentCorrelationId,
+            status: 'ERROR',
+            message: '任務請求失敗: ' + (error.message || JSON.stringify(error)),
+            finalEvent: true
+          });
+          this.taskService.disconnectEventStream(this.currentCorrelationId);
+        }
+      });
+    }
+  }
 } 

@@ -1,0 +1,64 @@
+.progress-dialog {
+  min-width: 600px;
+  max-width: 800px;
+}
+
+.progress-summary {
+  margin-bottom: 20px;
+}
+
+.progress-text {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.status-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+table {
+  width: 100%;
+}
+
+.status-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-pending {
+  color: #9e9e9e;
+}
+
+.status-processing {
+  color: #2196f3;
+}
+
+.status-completed {
+  color: #4caf50;
+}
+
+.status-failed {
+  color: #f44336;
+}
+
+.type-badge {
+  padding: 3px 8px;
+  border-radius: 16px;
+  color: white;
+  font-weight: 500;
+  font-size: 0.8em;
+  text-transform: uppercase;
+}
+
+.type-badge.fund {
+  background-color: #1976d2;
+}
+
+.type-badge.bond {
+  background-color: #ff9800;
+} 

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, merge } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface TaskRequest {
@@ -16,16 +16,18 @@ export interface TaskEvent {
     result?: any;
     finalEvent: boolean;
     receivedAt?: Date;
+    system?: 'fund' | 'bond'; // 添加系統標識
 }
 
 @Injectable({
     providedIn: 'root'
 })
 export class TaskService {
-    private apiUrl = 'http://localhost:8080/api';
+    private fundApiUrl = 'http://localhost:8080/api'; // 基金系統API
+    private bondApiUrl = 'http://localhost:8081/api'; // 債券系統API - 使用新的反向代理
     private eventSubject = new Subject<TaskEvent>();
     public events$ = this.eventSubject.asObservable();
-    private eventSource: EventSource | null = null;
+    private eventSources: Map<string, EventSource> = new Map(); // 存儲多個SSE連接
 
     constructor(private http: HttpClient) { }
 
@@ -37,80 +39,107 @@ export class TaskService {
     }
 
     /**
-     * 發起任務請求
+     * 發起任務請求 (已被FundBondService取代，保留向後兼容)
      */
     initiateTask(request: TaskRequest): Observable<string> {
-        return this.http.post<string>(`${this.apiUrl}/first-api`, request, {
+        return this.http.post<string>(`${this.fundApiUrl}/first-api`, request, {
             responseType: 'text' as 'json'
         });
     }
 
     /**
      * 建立 SSE 連接
+     * @param correlationId 關聯ID
+     * @param system 系統類型 ('fund' 或 'bond')
      */
-    connectToEventStream(correlationId: string): void {
-        // 關閉現有連接（如果有）
-        this.disconnectEventStream();
+    connectToEventStream(correlationId: string, system: 'fund' | 'bond' = 'fund'): void {
+        // 檢查是否已有此連接
+        if (this.eventSources.has(correlationId)) {
+            console.log(`已存在的SSE連接 (${correlationId})`);
+            return;
+        }
+
+        // 確定正確的API URL
+        const apiUrl = system === 'fund' ? this.fundApiUrl : this.bondApiUrl;
+
+        // 使用正確的事件端點
+        const eventsEndpoint = system === 'fund' ? 'events' : 'bond-events';
 
         // 建立新的 SSE 連接
-        this.eventSource = new EventSource(`${this.apiUrl}/events/${correlationId}`);
+        const eventSource = new EventSource(`${apiUrl}/${eventsEndpoint}/${correlationId}`);
+        this.eventSources.set(correlationId, eventSource);
 
         // Helper function to process and add timestamp
         const processEvent = (eventData: string, eventName?: string) => {
             try {
                 const taskEvent: TaskEvent = JSON.parse(eventData);
                 taskEvent.receivedAt = new Date();
-                console.log(`收到 SSE 事件 (${eventName || 'message'}):`, taskEvent);
+                taskEvent.system = system; // 添加系統標識
+                console.log(`收到 ${system} 系統 SSE 事件 (${eventName || 'message'}):`, taskEvent);
                 this.eventSubject.next(taskEvent);
 
                 if (taskEvent.finalEvent) {
-                    this.disconnectEventStream();
+                    this.disconnectEventStream(correlationId);
                 }
             } catch (error) {
-                console.error(`解析 SSE 事件 (${eventName || 'message'}) 失敗:`, eventData, error);
+                console.error(`解析 ${system} 系統 SSE 事件 (${eventName || 'message'}) 失敗:`, eventData, error);
                 this.eventSubject.next({
                     correlationId,
                     status: 'ERROR',
                     message: `客戶端解析事件失敗: ${eventData}`,
                     finalEvent: true,
-                    receivedAt: new Date()
+                    receivedAt: new Date(),
+                    system
                 });
-                this.disconnectEventStream();
+                this.disconnectEventStream(correlationId);
             }
         };
 
-        this.eventSource.onmessage = (event) => {
+        eventSource.onmessage = (event) => {
             processEvent(event.data);
         };
 
         // Use helper for specific listeners
-        this.eventSource.addEventListener('CONNECTED', (event: any) => processEvent(event.data, 'CONNECTED'));
-        this.eventSource.addEventListener('PROCESSING', (event: any) => processEvent(event.data, 'PROCESSING'));
-        this.eventSource.addEventListener('SUBTASK_COMPLETED', (event: any) => processEvent(event.data, 'SUBTASK_COMPLETED'));
-        this.eventSource.addEventListener('COMPLETED', (event: any) => processEvent(event.data, 'COMPLETED'));
-        this.eventSource.addEventListener('FAILED', (event: any) => processEvent(event.data, 'FAILED'));
+        eventSource.addEventListener('CONNECTED', (event: any) => processEvent(event.data, 'CONNECTED'));
+        eventSource.addEventListener('PROCESSING', (event: any) => processEvent(event.data, 'PROCESSING'));
+        eventSource.addEventListener('SUBTASK_COMPLETED', (event: any) => processEvent(event.data, 'SUBTASK_COMPLETED'));
+        eventSource.addEventListener('COMPLETED', (event: any) => processEvent(event.data, 'COMPLETED'));
+        eventSource.addEventListener('FAILED', (event: any) => processEvent(event.data, 'FAILED'));
 
-        this.eventSource.onerror = (error) => {
-            console.error('SSE 連接錯誤:', error);
-            this.disconnectEventStream();
+        eventSource.onerror = (error) => {
+            console.error(`${system} 系統 SSE 連接錯誤:`, error);
+            this.disconnectEventStream(correlationId);
             this.eventSubject.next({
                 correlationId,
                 status: 'ERROR',
-                message: 'SSE 連接出錯',
+                message: `${system} 系統 SSE 連接出錯`,
                 finalEvent: true,
-                receivedAt: new Date()
+                receivedAt: new Date(),
+                system
             });
         };
     }
 
     /**
-     * 關閉 SSE 連接
+     * 關閉特定 SSE 連接
      */
-    disconnectEventStream(): void {
-        if (this.eventSource) {
-            this.eventSource.close();
-            this.eventSource = null;
-            console.log('SSE 連接已關閉');
+    disconnectEventStream(correlationId: string): void {
+        const eventSource = this.eventSources.get(correlationId);
+        if (eventSource) {
+            eventSource.close();
+            this.eventSources.delete(correlationId);
+            console.log(`SSE 連接 ${correlationId} 已關閉`);
         }
+    }
+
+    /**
+     * 關閉所有 SSE 連接
+     */
+    disconnectAllEventStreams(): void {
+        this.eventSources.forEach((eventSource, id) => {
+            eventSource.close();
+            console.log(`SSE 連接 ${id} 已關閉`);
+        });
+        this.eventSources.clear();
     }
 } 
