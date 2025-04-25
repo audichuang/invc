@@ -103,7 +103,7 @@ export class FundBondTableComponent implements OnInit {
             const fundRequest = {
                 correlationId: itemId,
                 taskName: `基金處理-${item.name}`,
-                numberOfSubtasks: 1,
+                numberOfSubtasks: 5,
                 items: [item.id]
             };
 
@@ -124,7 +124,7 @@ export class FundBondTableComponent implements OnInit {
             const bondRequest = {
                 correlationId: itemId,
                 taskName: `債券處理-${item.name}`,
-                numberOfSubtasks: 1,
+                numberOfSubtasks: 3,
                 items: [item.id]
             };
 
