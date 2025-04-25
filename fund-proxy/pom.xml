@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>bond-proxy</artifactId>
+    <artifactId>fund-proxy</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>bond-proxy</name>
-    <description>債卷系統反向代理</description>
+    <name>fund-proxy</name>
+    <description>基金系統反向代理</description>
 
     <properties>
         <java.version>1.8</java.version>
