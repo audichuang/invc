@@ -71,8 +71,13 @@ export class FundBondTableComponent implements OnInit {
 
         // 打開不可關閉的進度彈窗
         const dialogRef = this.dialog.open(ProgressDialogComponent, {
-            width: '600px',
+            width: '800px',
+            maxWidth: '95vw',
             disableClose: true,
+            autoFocus: false,
+            restoreFocus: false,
+            maxHeight: '90vh',
+            panelClass: ['centered-dialog', 'mat-dialog-center-position'],
             data: {
                 correlationId,
                 items: this.selection

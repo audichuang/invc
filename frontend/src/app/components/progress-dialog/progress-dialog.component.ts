@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FundBondItem } from '../fund-bond-table/fund-bond-table.component';
 import { TaskService, TaskEvent } from '../../services/task.service';
@@ -11,6 +11,7 @@ export interface ProcessStatus {
     code: string;
     status: 'pending' | 'processing' | 'completed' | 'failed';
     message?: string;
+    originalIndex?: number; // 用於保存原始索引
 }
 
 export interface ProgressDialogData {
@@ -39,6 +40,7 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
     constructor(
         private dialogRef: MatDialogRef<ProgressDialogComponent>,
         private taskService: TaskService,
+        private cdr: ChangeDetectorRef,
         @Inject(MAT_DIALOG_DATA) public data: ProgressDialogData
     ) {
         this.fundCorrelationId = data.correlationId + '-fund';
@@ -46,11 +48,12 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
-        // 初始化項目狀態
-        this.itemStatuses = this.data.items.map(item => ({
+        // 初始化項目狀態並添加索引信息
+        this.itemStatuses = this.data.items.map((item, index) => ({
             ...item,
             status: 'pending',
-            message: '等待處理'
+            message: '等待處理',
+            originalIndex: index
         }));
 
         this.totalItems = this.itemStatuses.length;
@@ -58,6 +61,7 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
         // 訂閱事件更新
         this.eventsSubscription = this.taskService.events$.subscribe(event => {
             this.handleTaskEvent(event);
+            this.cdr.detectChanges(); // 確保 UI 更新
         });
     }
 
@@ -76,6 +80,10 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
         // 找出屬於該系統類型的項目
         const typeItems = this.itemStatuses.filter(item => item.type === eventType);
 
+        if (typeItems.length === 0) {
+            return; // 沒有匹配的項目，不處理
+        }
+
         // 通用事件處理
         if (event.status === 'PROCESSING' || event.status === 'CONNECTED') {
             // 處理中
@@ -87,7 +95,6 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
             });
         } else if (event.status === 'SUBTASK_COMPLETED') {
             // 子任務完成，嘗試更新項目狀態
-            // 處理子任務索引
             const subtaskIndex = this.extractSubtaskIndex(event.message, event.result);
 
             if (subtaskIndex !== null && subtaskIndex >= 0 && subtaskIndex < typeItems.length) {
@@ -100,31 +107,43 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
             }
         } else if (event.status === 'COMPLETED') {
             // 所有任務完成 - 將所有未完成的項目標記為完成
+            let newCompleted = 0;
             typeItems
                 .filter(item => item.status === 'processing' || item.status === 'pending')
                 .forEach(item => {
                     item.status = 'completed';
                     item.message = '處理完成';
-                    this.completedItems++;
+                    newCompleted++;
                 });
 
-            // 檢查是否可以關閉對話框
-            const allTasksCompleted = this.itemStatuses.every(
-                item => item.status === 'completed' || item.status === 'failed'
-            );
+            this.completedItems += newCompleted;
 
-            if (allTasksCompleted) {
-                this.dialogRef.disableClose = false;
-            }
+            // 檢查是否可以關閉對話框
+            this.checkAllCompleted();
         } else if (event.status === 'FAILED' || event.status === 'ERROR') {
             // 處理失敗
+            let newFailed = 0;
             typeItems
                 .filter(item => item.status !== 'completed')
                 .forEach(item => {
                     item.status = 'failed';
                     item.message = event.message || '處理失敗';
-                    this.failedItems++;
+                    newFailed++;
                 });
+
+            this.failedItems += newFailed;
+
+            // 檢查是否可以關閉對話框
+            this.checkAllCompleted();
+        }
+    }
+
+    // 檢查是否所有任務都已完成或失敗
+    private checkAllCompleted(): void {
+        const allTasksCompleted = this.allTasksCompleted();
+
+        if (allTasksCompleted) {
+            this.dialogRef.disableClose = false;
         }
     }
 
@@ -182,6 +201,7 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
             }
         }
 
-        return null;
+        // 如果無法解析具體索引，則使用第一個未完成的項目
+        return 0;
     }
 } 
