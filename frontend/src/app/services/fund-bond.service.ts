@@ -25,7 +25,7 @@ export class FundBondService {
      * 發起基金任務請求
      */
     initiateFundTask(request: FundBondTaskRequest): Observable<string> {
-        return this.http.post<string>(`${this.fundApiUrl}/first-api`, {
+        return this.http.post<string>(`${this.fundApiUrl}/fund-api`, {
             correlationId: request.correlationId,
             taskName: request.taskName,
             numberOfSubtasks: request.numberOfSubtasks,

@@ -15,10 +15,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin("*")
-public class TaskController {
+public class FundController {
     private final TaskService taskService;
 
-    @PostMapping("/first-api")
+    @PostMapping("/fund-api")
     public ResponseEntity<String> initiateTask(@RequestBody TaskRequest taskRequest) {
         log.info("收到任務請求，關聯 ID: {}", taskRequest.getCorrelationId());
         taskService.processTaskAsync(taskRequest);
