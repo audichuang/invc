@@ -71,6 +71,10 @@ export class FundBondTableComponent implements OnInit {
         const fundSseId = correlationId + '-fund';
         const bondSseId = correlationId + '-bond';
 
+        // 收集任務 ID
+        const fundTaskIds: string[] = fundItems.map((item, index) => `${correlationId}-fund-${index}`);
+        const bondTaskIds: string[] = bondItems.map((item, index) => `${correlationId}-bond-${index}`);
+
         // 打開不可關閉的進度彈窗
         const dialogRef = this.dialog.open(ProgressDialogComponent, {
             width: '800px',
@@ -88,13 +92,13 @@ export class FundBondTableComponent implements OnInit {
 
         // 先為每種類型建立SSE連接（如果有相應類型的項目）
         if (fundItems.length > 0) {
-            this.taskService.connectToEventStream(fundSseId, 'fund');
-            console.log('建立基金SSE連接:', fundSseId);
+            this.taskService.connectToEventStream(fundSseId, 'fund', fundTaskIds);
+            console.log('建立基金SSE連接:', fundSseId, '任務IDs:', fundTaskIds);
         }
 
         if (bondItems.length > 0) {
-            this.taskService.connectToEventStream(bondSseId, 'bond');
-            console.log('建立債券SSE連接:', bondSseId);
+            this.taskService.connectToEventStream(bondSseId, 'bond', bondTaskIds);
+            console.log('建立債券SSE連接:', bondSseId, '任務IDs:', bondTaskIds);
         }
 
         // 對於基金項目，每個項目分別發送請求
