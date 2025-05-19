@@ -1,302 +1,570 @@
-/* 整體容器樣式移到對話框內容上 */
-[mat-dialog-content] {
-  font-family: 'Roboto', sans-serif;
-  background-color: #fafafa;
-  padding: 20px !important;
+/* 現代化對話框容器 */
+.modern-dialog-container {
+  font-family: 'Roboto', 'Noto Sans TC', sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #fafbfd;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
+/* 頭部樣式 */
 .dialog-header {
-  background: linear-gradient(135deg, #2c5ecd, #3f51b5);
+  position: relative;
+  background: linear-gradient(135deg, #4158D0, #C850C0);
   color: white;
-  padding: 20px 24px;
-  margin: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 28px 32px 26px;
+  overflow: hidden;
+  z-index: 1;
 }
 
-h2 {
+.dialog-header h2 {
   margin: 0;
-  font-weight: 500;
-  font-size: 20px;
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 2;
 }
 
-/* 進度摘要 */
-.progress-summary {
+.header-decoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='rgba(255,255,255,.075)' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.6;
+  z-index: 1;
+}
+
+/* 內容區域 */
+.dialog-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 進度卡片 */
+.progress-card {
   background: white;
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  animation: fade-in 0.5s ease-out;
+  transition: all 0.3s ease;
+}
+
+.progress-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.card-section {
   margin-bottom: 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .progress-title {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.progress-title span {
+  font-size: 18px;
   font-weight: 500;
   color: #333;
 }
 
-.progress-percentage {
-  font-size: 18px;
-  font-weight: 600;
-  color: #3f51b5;
-}
-
-.custom-progress-bar {
-  height: 8px;
-  border-radius: 4px;
-}
-
-.progress-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  background-color: #f9f9f9;
-}
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #666;
-}
-
-.stat-item.success .stat-value {
-  color: #4caf50;
-}
-
-.stat-item.danger .stat-value {
-  color: #f44336;
-}
-
-/* 表格容器 */
-.status-table-container {
-  max-height: 400px;
-  overflow-y: auto;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.custom-table {
-  width: 100%;
-  background: white;
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: 10px;
+.progress-percentage-container {
+  background: linear-gradient(135deg, #4158D0, #C850C0);
+  border-radius: 12px;
+  padding: 1px;
+  position: relative;
   overflow: hidden;
 }
 
-/* 表頭 */
-th.mat-header-cell {
-  background-color: #f5f7fa;
-  color: #555;
-  font-weight: 500;
-  font-size: 14px;
-  padding: 16px;
-  border-bottom: 1px solid #eee;
+.progress-percentage {
+  display: block;
+  background-color: white;
+  border-radius: 11px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #4158D0;
+  position: relative;
+  z-index: 1;
 }
 
-/* 表格內容 */
-td.mat-cell {
-  padding: 16px;
-  font-size: 14px;
-  color: #333;
-  border-bottom: 1px solid #f2f2f2;
+/* 進度條容器 */
+.progress-bar-container {
+  flex: 1;
+  height: 12px;
+  background-color: #eaecf2;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 類型標籤 */
-.type-badge {
-  padding: 6px 10px;
-  border-radius: 50px;
+/* 實際進度填充 */
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4158D0, #C850C0);
+  border-radius: 8px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.custom-progress-bar {
+  height: 14px !important;
+  border-radius: 7px;
+}
+
+.custom-progress-bar.completed-bar ::ng-deep .mat-progress-bar-fill::after {
+  background: linear-gradient(135deg, #42e695, #3bb2b8);
+}
+
+.custom-progress-bar.in-progress-bar ::ng-deep .mat-progress-bar-fill::after {
+  background: linear-gradient(135deg, #4158D0, #C850C0);
+  animation: progress-pulse 2s infinite;
+}
+
+.custom-progress-bar.not-started-bar ::ng-deep .mat-progress-bar-fill::after {
+  background-color: #e0e0e0;
+}
+
+/* 統計卡片區域 */
+.stat-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 120px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 14px;
+}
+
+.stat-icon .mat-icon {
   color: white;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.total-icon {
+  background: linear-gradient(135deg, #4158D0, #C850C0);
+}
+
+.success-icon {
+  background: linear-gradient(135deg, #42e695, #3bb2b8);
+}
+
+.danger-icon {
+  background: linear-gradient(135deg, #FF5858, #FF416C);
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.3;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* 表格容器 */
+.items-table-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  animation: fade-in 0.5s ease-out;
+  animation-delay: 0.2s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.table-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.table-header h3 {
+  margin: 0;
+  font-size: 18px;
   font-weight: 500;
-  font-size: 12px;
+  color: #333;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* 表格顯示 */
+.modern-table th.mat-header-cell {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  display: inline-block;
-  text-align: center;
+}
+
+.modern-table td.mat-cell {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f2f5;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* 表格行動畫和懸停效果 */
+.table-row-animate {
+  transition: all 0.3s ease;
+}
+
+.table-row-animate:hover {
+  background-color: #f8f9fa;
+  transform: translateX(5px);
+}
+
+.status-row-completed:hover {
+  border-left: 4px solid #42e695;
+}
+
+.status-row-failed:hover {
+  border-left: 4px solid #FF416C;
+}
+
+.status-row-processing:hover {
+  border-left: 4px solid #4158D0;
+}
+
+.status-row-pending:hover {
+  border-left: 4px solid #f0f2f5;
+}
+
+/* 項目名稱 */
+.item-name {
+  font-weight: 500;
+  color: #333;
+}
+
+/* 類型徽章 */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
   min-width: 60px;
+  text-align: center;
 }
 
 .type-badge.fund {
-  background: linear-gradient(135deg, #1976d2, #2196f3);
+  background: linear-gradient(135deg, #4158D0, #C850C0);
 }
 
 .type-badge.bond {
-  background: linear-gradient(135deg, #ff9800, #ffb74d);
+  background: linear-gradient(135deg, #6a11cb, #2575fc);
 }
 
-/* 代碼 */
-.code-value {
+/* 代碼樣式 */
+.code-chip {
+  display: inline-block;
+  background-color: #f0f2f5;
+  padding: 6px 12px;
+  border-radius: 8px;
   font-family: 'Roboto Mono', monospace;
-  background-color: #f5f7fa;
-  padding: 4px 8px;
-  border-radius: 4px;
-  color: #333;
   font-size: 13px;
+  letter-spacing: 0.5px;
+  color: #555;
 }
 
-/* 狀態指示器 */
+/* 狀態樣式 */
+.status-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  position: relative;
 }
 
-.status-box {
+.status-completed .mat-icon {
+  color: #42e695;
+  animation: scale-in 0.5s ease-out;
+}
+
+.status-failed .mat-icon {
+  color: #FF416C;
+  animation: scale-in 0.5s ease-out;
+}
+
+.status-pending .mat-icon {
+  color: #999;
+}
+
+.processing-spinner {
   display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.status-box.completed {
-  background-color: #e8f5e9;
-  color: #4caf50;
-}
-
-.status-box.failed {
-  background-color: #ffebee;
-  color: #f44336;
-}
-
-.status-box.processing {
-  background-color: #e3f2fd;
-  color: #2196f3;
-  display: flex;
-  align-items: center;
-}
-
-.status-box.pending {
-  background-color: #f5f5f5;
-  color: #9e9e9e;
-}
-
-/* 圖標 */
-.status-icon {
-  font-size: 20px !important;
-  height: 20px !important;
-  width: 20px !important;
-  margin-right: 8px;
-  display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  vertical-align: middle;
 }
 
-/* 脈動點指示器 */
-.pulse-container {
-  position: relative;
-  width: 10px;
+.processing-spinner ::ng-deep .mat-progress-spinner circle {
+  stroke: #4158D0;
+}
+
+.status-text {
+  font-size: 14px;
+  color: #555;
+}
+
+/* 進度單元格 */
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.progress-cell .progress-bar-container {
+  flex: 1;
   height: 10px;
-  margin-right: 10px;
+  background-color: #f0f2f5;
+  border-radius: 5px;
+  overflow: hidden;
 }
 
-.pulse-dot {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: #2196f3;
-  border-radius: 50%;
-  animation: pulse 1.5s ease-in-out infinite;
+.item-progress-bar {
+  height: 10px !important;
+  border-radius: 5px;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(0.8);
-    opacity: 0.5;
-    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7);
+.item-progress-bar.completed ::ng-deep .mat-progress-bar-fill::after {
+  background: linear-gradient(135deg, #42e695, #3bb2b8);
+}
+
+.item-progress-bar.failed ::ng-deep .mat-progress-bar-fill::after {
+  background: linear-gradient(135deg, #FF5858, #FF416C);
+}
+
+.item-progress-bar.processing ::ng-deep .mat-progress-bar-fill::after {
+  background: linear-gradient(135deg, #4158D0, #C850C0);
+  animation: progress-pulse 2s infinite;
+}
+
+.item-progress-bar.pending ::ng-deep .mat-progress-bar-fill::after {
+  background-color: #e0e0e0;
+}
+
+/* 進度百分比徽章 */
+.progress-badge {
+  background-color: #f0f4ff;
+  color: #4158D0;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 16px;
+  min-width: 60px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 對於不同進度的樣式變化 */
+.progress-fill.high {
+  background: linear-gradient(90deg, #42e695, #3bb2b8);
+}
+
+.progress-fill.medium {
+  background: linear-gradient(90deg, #4158D0, #C850C0);
+}
+
+.progress-fill.low {
+  background: linear-gradient(90deg, #FF5858, #FF416C);
+}
+
+.progress-badge.completed {
+  background-color: rgba(66, 230, 149, 0.1);
+  color: #42e695;
+}
+
+.progress-badge.failed {
+  background-color: rgba(255, 65, 108, 0.1);
+  color: #FF416C;
+}
+
+.progress-badge.processing {
+  background-color: rgba(65, 88, 208, 0.1);
+  color: #4158D0;
+}
+
+.progress-badge.pending {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #999;
+}
+
+/* 按鈕區域 */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f2f5;
+  background-color: white;
+}
+
+.close-button {
+  min-width: 120px;
+  border-radius: 24px;
+  padding: 8px 24px;
+  font-weight: 500;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e0e0e0;
+  color: #999;
+  transition: all 0.3s ease;
+}
+
+.close-button .mat-icon {
+  margin-right: 8px;
+}
+
+.close-button.enabled {
+  background: linear-gradient(135deg, #4158D0, #C850C0);
+  color: white;
+  box-shadow: 0 5px 15px rgba(65, 88, 208, 0.4);
+}
+
+.close-button.enabled:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(65, 88, 208, 0.5);
+}
+
+/* 自定義滾動條 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c5c5c5;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+/* 動畫效果 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  70% {
-    transform: scale(1);
+  to {
     opacity: 1;
-    box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
-  }
-  100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+    transform: translateY(0);
   }
 }
 
-/* 點動畫 */
-.dots {
-  display: inline-block;
-  margin-left: 4px;
+@keyframes scale-in {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
-.dot {
-  display: inline-block;
-  animation: dot-pulse 1.5s infinite;
-  animation-fill-mode: both;
-  font-size: 18px;
-  line-height: 14px;
-}
-
-.dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes dot-pulse {
+@keyframes progress-pulse {
   0% {
-    opacity: 0.2;
+    opacity: 0.8;
   }
   50% {
     opacity: 1;
   }
   100% {
-    opacity: 0.2;
+    opacity: 0.8;
   }
 }
 
-/* 底部按鈕 */
-.action-buttons {
-  padding: 16px 0 0;
-  justify-content: flex-end;
+/* 響應式調整 */
+@media (max-width: 768px) {
+  .dialog-content {
+    padding: 16px;
+  }
+  
+  .stat-cards {
+    flex-direction: column;
+  }
+  
+  .progress-card,
+  .items-table-container {
+    padding: 16px;
+  }
+  
+  .modern-table td.mat-cell,
+  .modern-table th.mat-header-cell {
+    padding: 12px 16px;
+  }
 }
-
-.close-button {
-  min-width: 100px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* 自訂滾動條 */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c5c5c5;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a0a0a0;
-} 

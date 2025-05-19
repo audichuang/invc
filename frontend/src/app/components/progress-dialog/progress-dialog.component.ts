@@ -1,8 +1,9 @@
-import { Component, Inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy, ChangeDetectorRef, ViewEncapsulation } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { FundBondItem } from '../fund-bond-table/fund-bond-table.component';
 import { TaskService, TaskEvent } from '../../services/task.service';
 import { Subscription } from 'rxjs';
+import { trigger, transition, style, animate } from '@angular/animations';
 
 export interface ProcessStatus {
     id: string;
@@ -11,7 +12,11 @@ export interface ProcessStatus {
     code: string;
     status: 'pending' | 'processing' | 'completed' | 'failed';
     message?: string;
-    originalIndex?: number; // 用於保存原始索引
+    originalIndex?: number; // 保存原始索引
+    progress: number; // 進度百分比 (0-100)
+    detailedStatus: string; // 更詳細的中文狀態描述
+    totalSubtasks: number; // 總子任務數
+    completedSubtasksCount: number; // 已完成子任務數
 }
 
 export interface ProgressDialogData {
@@ -22,10 +27,23 @@ export interface ProgressDialogData {
 @Component({
     selector: 'app-progress-dialog',
     templateUrl: './progress-dialog.component.html',
-    styleUrls: ['./progress-dialog.component.css']
+    styleUrls: ['./progress-dialog.component.css'],
+    encapsulation: ViewEncapsulation.None,
+    animations: [
+        trigger('fadeInOut', [
+            transition(':enter', [
+                style({ opacity: 0 }),
+                animate('300ms ease-out', style({ opacity: 1 }))
+            ]),
+            transition(':leave', [
+                animate('300ms ease-in', style({ opacity: 0 }))
+            ])
+        ])
+    ]
 })
 export class ProgressDialogComponent implements OnInit, OnDestroy {
-    displayedColumns: string[] = ['name', 'type', 'code', 'status'];
+
+    displayedColumns: string[] = ['name', 'type', 'code', 'detailedStatus', 'progress'];
     itemStatuses: ProcessStatus[] = [];
 
     totalItems = 0;
@@ -53,7 +71,11 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
             ...item,
             status: 'pending',
             message: '等待處理',
-            originalIndex: index
+            originalIndex: index,
+            progress: 0, // 初始化進度
+            detailedStatus: '等待中',
+            totalSubtasks: 0, // 初始化
+            completedSubtasksCount: 0 // 初始化
         }));
 
         this.totalItems = this.itemStatuses.length;
@@ -110,16 +132,23 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
         // 處理整體連接事件
         if (event.status === 'CONNECTED') {
             console.log(`${eventType}系統已連接`);
+            // 可以考慮為所有此類型的 pending 項目更新 detailedStatus
+            affectedItems.forEach(item => {
+                if (item.status === 'pending') {
+                    item.detailedStatus = '已連接，等待任務開始';
+                }
+            });
         }
         // 處理通用錯誤事件
-        else if (event.status === 'ERROR' || event.status === 'FAILED') {
-            // 將所有待處理的項目設置為失敗
+        else if (event.status === 'ERROR' || event.status === 'FAILED' || event.status === 'STREAM_CLOSED') {
             let newFailed = 0;
             affectedItems
                 .filter(item => item.status !== 'completed' && item.status !== 'failed')
                 .forEach(item => {
                     item.status = 'failed';
-                    item.message = event.message || `${eventType}系統錯誤`;
+                    item.detailedStatus = event.message || `${eventType}系統錯誤或連線中斷`;
+                    item.progress = item.progress > 0 ? item.progress : 0; // 如果已經開始，保持進度；否則為0。或統一設為100表示結束
+                    // item.progress = 100; // 或者將失敗的任務進度也視為100% (表示處理結束)
                     newFailed++;
                 });
 
@@ -130,26 +159,52 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
 
     // 更新單個項目的狀態
     private updateItemStatus(item: ProcessStatus, event: TaskEvent): void {
-        if (event.status === 'PROCESSING' || event.status === 'CONNECTED') {
-            if (item.status === 'pending') {
+        if (event.status === 'PROCESSING') {
+            if (item.status === 'pending' || item.status !== 'processing') {
                 item.status = 'processing';
-                item.message = '處理中...';
+                item.detailedStatus = '開始處理...'; // 更新初始狀態文字
+                item.totalSubtasks = (item.type === 'fund') ? 5 : 3; // 根據類型設定總子任務數
+                item.completedSubtasksCount = 0;
+                item.progress = item.totalSubtasks > 0 ? 5 : 10; // 如果有子任務，初始進度小一點，否則直接給10%
+            }
+        } else if (event.status === 'SUBTASK_COMPLETED') {
+            if (item.status === 'processing') {
+                item.detailedStatus = event.message || `子任務進展...`;
+                if (item.totalSubtasks > 0) {
+                    item.completedSubtasksCount++;
+                    item.progress = Math.min(100, Math.round((item.completedSubtasksCount / item.totalSubtasks) * 100));
+                } else {
+                    // 沒有設定 totalSubtasks，做一個估算增加
+                    if (item.progress < 90) {
+                        item.progress += 15; // 每次子任務完成增加一個估算值
+                    }
+                }
             }
         } else if (event.status === 'COMPLETED') {
             if (item.status !== 'completed') {
                 item.status = 'completed';
-                item.message = event.message || '處理完成';
+                item.detailedStatus = event.message || '處理完成';
+                item.progress = 100;
                 this.completedItems++;
                 this.checkAllCompleted();
             }
         } else if (event.status === 'FAILED' || event.status === 'ERROR') {
             if (item.status !== 'failed') {
                 item.status = 'failed';
-                item.message = event.message || '處理失敗';
+                item.detailedStatus = event.message || '處理失敗';
+                // 失敗時，進度可以保持原樣，或設為100表示流程結束，或設為0
+                // 這裡我們選擇保持失敗前的進度，如果之前有進度的話
+                item.progress = item.progress > 0 ? item.progress : 0;
                 this.failedItems++;
                 this.checkAllCompleted();
             }
+        } else if (event.status === 'ALL_TASKS_COMPLETED') {
+            // 這個事件是針對整個 SSE 連線的，目前 item-specific 處理中可能不會直接用到
+            // 但如果邏輯需要，可以處理
+            console.log('收到 ALL_TASKS_COMPLETED 事件，更新對應項目群組的最終狀態（如果需要）');
         }
+
+        // 其他可能的狀態，例如 STREAM_CLOSED，已在通用事件處理中覆蓋
     }
 
     // 檢查是否所有任務都已完成或失敗
