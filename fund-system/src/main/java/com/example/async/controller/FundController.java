@@ -1,5 +1,6 @@
 package com.example.async.controller;
 
+import com.example.async.model.SseRequest;
 import com.example.async.model.TaskRequest;
 import com.example.async.service.TaskService;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +27,10 @@ public class FundController {
                 .body("任務已啟動，關聯 ID: " + taskRequest.getCorrelationId());
     }
 
-    @GetMapping(value = "/fund-events/{correlationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribeToEvents(@PathVariable String correlationId) {
-        log.info("為關聯 ID {} 建立 SSE 連線", correlationId);
+    @PostMapping(value = "/fund-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeToEvents(@RequestBody SseRequest sseRequest) {
+        String correlationId = sseRequest.getCorrelationId();
+        log.info("為關聯 ID {} 建立 SSE 連線 (POST, body)", correlationId);
         return taskService.createSseEmitter(correlationId);
     }
 }

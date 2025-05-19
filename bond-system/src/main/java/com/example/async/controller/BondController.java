@@ -1,5 +1,6 @@
 package com.example.async.controller;
 
+import com.example.async.model.SseRequest;
 import com.example.async.model.TaskRequest;
 import com.example.async.service.BondService;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +27,10 @@ public class BondController {
                 .body("債券任務已啟動，關聯 ID: " + taskRequest.getCorrelationId());
     }
 
-    @GetMapping(value = "/bond-events/{correlationId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribeToEvents(@PathVariable String correlationId) {
-        log.info("為債券系統關聯 ID {} 建立 SSE 連線", correlationId);
+    @PostMapping(value = "/bond-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeToEvents(@RequestBody SseRequest sseRequest) {
+        String correlationId = sseRequest.getCorrelationId();
+        log.info("為債券系統關聯 ID {} 建立 SSE 連線 (POST, body)", correlationId);
         return bondService.createSseEmitter(correlationId);
     }
 }
