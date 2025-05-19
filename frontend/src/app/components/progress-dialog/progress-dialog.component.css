@@ -1,3 +1,21 @@
+/* 全域覆蓋對話框樣式 */
+::ng-deep .cdk-overlay-container .progress-dialog-pane .mat-dialog-container {
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 16px !important;
+  max-height: 90vh !important;
+  max-width: 90vw !important;
+  width: auto !important;
+  height: auto !important;
+  box-sizing: border-box;
+}
+
+/* 確保不會被Angular Material的預設樣式覆蓋 */
+::ng-deep .cdk-overlay-pane.progress-dialog-pane {
+  max-height: 90vh !important;
+  max-width: 90vw !important;
+}
+
 /* 現代化對話框容器 */
 .modern-dialog-container {
   font-family: 'Roboto', 'Noto Sans TC', sans-serif;
@@ -5,27 +23,44 @@
   flex-direction: column;
   height: 100%;
   background-color: #fafbfd;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
+  max-height: 90vh;
+  width: 100%;
 }
 
 /* 頭部樣式 */
 .dialog-header {
   position: relative;
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
   color: white;
-  padding: 28px 32px 26px;
+  padding: 24px 28px 22px;
   overflow: hidden;
   z-index: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .dialog-header h2 {
   margin: 0;
   font-weight: 600;
-  font-size: 24px;
+  font-size: 22px;
   letter-spacing: 0.5px;
   position: relative;
   z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.dialog-header h2::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 22px;
+  background: white;
+  margin-right: 12px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .header-decoration {
@@ -42,11 +77,13 @@
 /* 內容區域 */
 .dialog-content {
   flex: 1;
-  padding: 24px;
+  padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  max-height: calc(90vh - 180px); /* 減去標題和按鈕區域的高度 */
+  min-height: 300px;
 }
 
 /* 進度卡片 */
@@ -54,13 +91,15 @@
   background: white;
   border-radius: 16px;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
-  padding: 24px;
+  padding: 20px;
   animation: fade-in 0.5s ease-out;
   transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  flex-shrink: 0;
 }
 
 .progress-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
@@ -79,14 +118,17 @@
   font-size: 18px;
   font-weight: 500;
   color: #333;
+  position: relative;
+  padding-left: 12px;
 }
 
 .progress-percentage-container {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
   border-radius: 12px;
   padding: 1px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
 }
 
 .progress-percentage {
@@ -96,7 +138,7 @@
   padding: 6px 14px;
   font-weight: 600;
   font-size: 16px;
-  color: #4158D0;
+  color: #1b8f54;
   position: relative;
   z-index: 1;
 }
@@ -115,10 +157,54 @@
 /* 實際進度填充 */
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4158D0, #C850C0);
+  background: linear-gradient(90deg, #1b8f54, #45c76c);
   border-radius: 8px;
-  transition: width 0.3s ease;
+  transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
+  box-shadow: 0 0 6px rgba(27, 143, 84, 0.5);
+}
+
+/* 進度條動畫點 */
+.progress-animation-dot {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translate(50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(50%, -50%) scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(50%, -50%) scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+.progress-fill.high {
+  background: linear-gradient(90deg, #1b8f54, #45c76c);
+  box-shadow: 0 0 6px rgba(27, 143, 84, 0.7);
+}
+
+.progress-fill.medium {
+  background: linear-gradient(90deg, #45c76c, #7ed957);
+}
+
+.progress-fill.low {
+  background: linear-gradient(90deg, #7ed957, #bdf0a6);
+  box-shadow: 0 0 6px rgba(126, 217, 87, 0.5);
 }
 
 .custom-progress-bar {
@@ -127,11 +213,11 @@
 }
 
 .custom-progress-bar.completed-bar ::ng-deep .mat-progress-bar-fill::after {
-  background: linear-gradient(135deg, #42e695, #3bb2b8);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
 }
 
 .custom-progress-bar.in-progress-bar ::ng-deep .mat-progress-bar-fill::after {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #45c76c, #7ed957);
   animation: progress-pulse 2s infinite;
 }
 
@@ -156,11 +242,30 @@
   align-items: center;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.8), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card:hover::after {
+  opacity: 1;
 }
 
 .stat-icon {
@@ -171,6 +276,7 @@
   align-items: center;
   justify-content: center;
   margin-right: 14px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .stat-icon .mat-icon {
@@ -181,15 +287,15 @@
 }
 
 .total-icon {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
 }
 
 .success-icon {
-  background: linear-gradient(135deg, #42e695, #3bb2b8);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
 }
 
 .danger-icon {
-  background: linear-gradient(135deg, #FF5858, #FF416C);
+  background: linear-gradient(135deg, #ff5858, #ff716c);
 }
 
 .stat-content {
@@ -219,11 +325,13 @@
   animation-delay: 0.2s;
   opacity: 0;
   animation-fill-mode: forwards;
+  border: 1px solid rgba(0, 0, 0, 0.03);
 }
 
 .table-header {
   padding: 18px 24px;
   border-bottom: 1px solid #f0f2f5;
+  background: linear-gradient(to right, rgba(27, 143, 84, 0.05), rgba(69, 199, 108, 0.05));
 }
 
 .table-header h3 {
@@ -231,6 +339,20 @@
   font-size: 18px;
   font-weight: 500;
   color: #333;
+  position: relative;
+  padding-left: 12px;
+}
+
+.table-header h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 18px;
+  background: linear-gradient(to bottom, #1b8f54, #45c76c);
+  border-radius: 2px;
 }
 
 .table-wrapper {
@@ -275,7 +397,7 @@
 }
 
 .status-row-completed:hover {
-  border-left: 4px solid #42e695;
+  border-left: 4px solid #45c76c;
 }
 
 .status-row-failed:hover {
@@ -283,7 +405,7 @@
 }
 
 .status-row-processing:hover {
-  border-left: 4px solid #4158D0;
+  border-left: 4px solid #1b8f54;
 }
 
 .status-row-pending:hover {
@@ -308,14 +430,15 @@
   color: white;
   min-width: 60px;
   text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .type-badge.fund {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
 }
 
 .type-badge.bond {
-  background: linear-gradient(135deg, #6a11cb, #2575fc);
+  background: linear-gradient(135deg, #45c76c, #7ed957);
 }
 
 /* 代碼樣式 */
@@ -328,6 +451,7 @@
   font-size: 13px;
   letter-spacing: 0.5px;
   color: #555;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* 狀態樣式 */
@@ -346,7 +470,7 @@
 }
 
 .status-completed .mat-icon {
-  color: #42e695;
+  color: #45c76c;
   animation: scale-in 0.5s ease-out;
 }
 
@@ -366,7 +490,7 @@
 }
 
 .processing-spinner ::ng-deep .mat-progress-spinner circle {
-  stroke: #4158D0;
+  stroke: #1b8f54;
 }
 
 .status-text {
@@ -396,7 +520,7 @@
 }
 
 .item-progress-bar.completed ::ng-deep .mat-progress-bar-fill::after {
-  background: linear-gradient(135deg, #42e695, #3bb2b8);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
 }
 
 .item-progress-bar.failed ::ng-deep .mat-progress-bar-fill::after {
@@ -404,7 +528,7 @@
 }
 
 .item-progress-bar.processing ::ng-deep .mat-progress-bar-fill::after {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
   animation: progress-pulse 2s infinite;
 }
 
@@ -415,41 +539,33 @@
 /* 進度百分比徽章 */
 .progress-badge {
   background-color: #f0f4ff;
-  color: #4158D0;
+  color: #1b8f54;
   font-weight: 600;
   padding: 6px 14px;
   border-radius: 16px;
   min-width: 60px;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 /* 對於不同進度的樣式變化 */
-.progress-fill.high {
-  background: linear-gradient(90deg, #42e695, #3bb2b8);
-}
-
-.progress-fill.medium {
-  background: linear-gradient(90deg, #4158D0, #C850C0);
-}
-
-.progress-fill.low {
-  background: linear-gradient(90deg, #FF5858, #FF416C);
-}
-
 .progress-badge.completed {
-  background-color: rgba(66, 230, 149, 0.1);
-  color: #42e695;
+  background-color: rgba(27, 143, 84, 0.1);
+  color: #1b8f54;
+  box-shadow: 0 2px 5px rgba(27, 143, 84, 0.2);
 }
 
 .progress-badge.failed {
   background-color: rgba(255, 65, 108, 0.1);
   color: #FF416C;
+  box-shadow: 0 2px 5px rgba(255, 65, 108, 0.2);
 }
 
 .progress-badge.processing {
-  background-color: rgba(65, 88, 208, 0.1);
-  color: #4158D0;
+  background-color: rgba(27, 143, 84, 0.1);
+  color: #1b8f54;
+  box-shadow: 0 2px 5px rgba(27, 143, 84, 0.2);
 }
 
 .progress-badge.pending {
@@ -464,6 +580,7 @@
   padding: 16px 24px;
   border-top: 1px solid #f0f2f5;
   background-color: white;
+  flex-shrink: 0;
 }
 
 .close-button {
@@ -485,14 +602,14 @@
 }
 
 .close-button.enabled {
-  background: linear-gradient(135deg, #4158D0, #C850C0);
+  background: linear-gradient(135deg, #1b8f54, #45c76c);
   color: white;
-  box-shadow: 0 5px 15px rgba(65, 88, 208, 0.4);
+  box-shadow: 0 5px 15px rgba(27, 143, 84, 0.4);
 }
 
 .close-button.enabled:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(65, 88, 208, 0.5);
+  box-shadow: 0 8px 20px rgba(27, 143, 84, 0.5);
 }
 
 /* 自定義滾動條 */

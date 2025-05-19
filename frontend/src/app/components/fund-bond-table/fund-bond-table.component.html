@@ -1,68 +1,91 @@
-<div class="fund-bond-table-container mat-elevation-z8">
-  <h2>基金與債券產品選擇</h2>
-
-  <div class="table-operations">
-    <mat-checkbox
-      [checked]="isAllSelected()"
-      [indeterminate]="isSomeSelected()"
-      (change)="selectAll($event)"
-    >
-      全選
-    </mat-checkbox>
-
-    <button
-      mat-raised-button
-      color="primary"
-      (click)="submitSelection()"
-      [disabled]="selection.length === 0"
-    >
-      提交選擇 (已選 {{ selection.length }} 項)
-    </button>
+<div class="modern-table-container">
+  <div class="table-header">
+    <h2>基金與債券產品選擇</h2>
+    <div class="header-decoration"></div>
   </div>
 
-  <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
-    <!-- 選擇列 -->
-    <ng-container matColumnDef="select">
-      <th mat-header-cell *matHeaderCellDef>選擇</th>
-      <td mat-cell *matCellDef="let item">
+  <div class="table-content">
+    <div class="operations-card">
+      <div class="operations-wrapper">
         <mat-checkbox
-          [checked]="item.selected"
-          (change)="toggleSelection(item, $event)"
+          [checked]="isAllSelected()"
+          [indeterminate]="isSomeSelected()"
+          (change)="selectAll($event)"
+          class="selection-checkbox"
         >
+          全選
         </mat-checkbox>
-      </td>
-    </ng-container>
 
-    <!-- 名稱列 -->
-    <ng-container matColumnDef="name">
-      <th mat-header-cell *matHeaderCellDef>產品名稱</th>
-      <td mat-cell *matCellDef="let item">{{ item.name }}</td>
-    </ng-container>
-
-    <!-- 類型列 -->
-    <ng-container matColumnDef="type">
-      <th mat-header-cell *matHeaderCellDef>類型</th>
-      <td mat-cell *matCellDef="let item">
-        <span
-          class="type-badge"
-          [ngClass]="{ fund: item.type === 'fund', bond: item.type === 'bond' }"
+        <button
+          mat-flat-button
+          (click)="submitSelection()"
+          [disabled]="selection.length === 0"
+          class="submit-button"
+          [ngClass]="{ enabled: selection.length > 0 }"
         >
-          {{ item.type === "fund" ? "基金" : "債券" }}
-        </span>
-      </td>
-    </ng-container>
+          <mat-icon>send</mat-icon>
+          提交選擇
+          <span class="selection-count" *ngIf="selection.length > 0"
+            >(已選 {{ selection.length }} 項)</span
+          >
+        </button>
+      </div>
+    </div>
 
-    <!-- 代碼列 -->
-    <ng-container matColumnDef="code">
-      <th mat-header-cell *matHeaderCellDef>產品代碼</th>
-      <td mat-cell *matCellDef="let item">{{ item.code }}</td>
-    </ng-container>
+    <div class="data-table-container">
+      <div class="table-wrapper">
+        <table mat-table [dataSource]="dataSource" class="modern-table">
+          <!-- 選擇列 -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>選擇</th>
+            <td mat-cell *matCellDef="let item">
+              <mat-checkbox
+                [checked]="item.selected"
+                (change)="toggleSelection(item, $event)"
+                class="item-checkbox"
+              >
+              </mat-checkbox>
+            </td>
+          </ng-container>
 
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr
-      mat-row
-      *matRowDef="let row; columns: displayedColumns"
-      [class.selected-row]="row.selected"
-    ></tr>
-  </table>
+          <!-- 名稱列 -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>產品名稱</th>
+            <td mat-cell *matCellDef="let item">
+              <div class="item-name">{{ item.name }}</div>
+            </td>
+          </ng-container>
+
+          <!-- 類型列 -->
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>類型</th>
+            <td mat-cell *matCellDef="let item">
+              <div class="type-badge" [ngClass]="item.type">
+                {{ item.type === "fund" ? "基金" : "債券" }}
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- 代碼列 -->
+          <ng-container matColumnDef="code">
+            <th mat-header-cell *matHeaderCellDef>產品代碼</th>
+            <td mat-cell *matCellDef="let item">
+              <div class="code-chip">{{ item.code }}</div>
+            </td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="displayedColumns; sticky: true"
+          ></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: displayedColumns"
+            [class.selected-row]="row.selected"
+            class="table-row-animate"
+          ></tr>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>

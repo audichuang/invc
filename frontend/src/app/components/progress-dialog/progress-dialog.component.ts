@@ -63,6 +63,12 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
     ) {
         this.fundCorrelationId = data.correlationId + '-fund';
         this.bondCorrelationId = data.correlationId + '-bond';
+
+        // 設置對話框的面板類別，以便CSS能夠定位它
+        this.dialogRef.addPanelClass('progress-dialog-pane');
+
+        // 預設不允許點擊外部關閉，直到所有任務完成
+        this.dialogRef.disableClose = true;
     }
 
     ngOnInit(): void {
@@ -227,7 +233,29 @@ export class ProgressDialogComponent implements OnInit, OnDestroy {
 
     getProgressPercentage(): number {
         if (this.totalItems === 0) return 0;
-        return Math.round(((this.completedItems + this.failedItems) / this.totalItems) * 100);
+
+        // 計算總進度，包括已完成、失敗和處理中的項目
+        let totalProgress = 0;
+
+        // 計算每個項目對整體進度的貢獻
+        this.itemStatuses.forEach(item => {
+            // 已完成項目算100%
+            if (item.status === 'completed') {
+                totalProgress += 100;
+            }
+            // 失敗項目也算100%進度（因為已經結束）
+            else if (item.status === 'failed') {
+                totalProgress += 100;
+            }
+            // 處理中項目按進度計算，確保至少有5%的進度顯示
+            else if (item.status === 'processing') {
+                totalProgress += Math.max(5, item.progress);
+            }
+            // 其他狀態（等待中）算0%
+        });
+
+        // 計算平均進度，確保一定程度的動態效果
+        return Math.round(totalProgress / this.totalItems);
     }
 
     allTasksCompleted(): boolean {

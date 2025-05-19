@@ -17,18 +17,26 @@
           </div>
         </div>
 
+        <!-- 客製化總進度條，改良版，使用動畫效果 -->
         <div class="progress-bar-container">
-          <mat-progress-bar
-            class="custom-progress-bar"
-            mode="determinate"
-            [value]="getProgressPercentage()"
-            [ngClass]="{
-              'completed-bar': getProgressPercentage() === 100,
-              'in-progress-bar':
-                getProgressPercentage() > 0 && getProgressPercentage() < 100,
-              'not-started-bar': getProgressPercentage() === 0
-            }"
-          ></mat-progress-bar>
+          <div
+            class="progress-fill"
+            [style.width.%]="getProgressPercentage()"
+            [class.high]="getProgressPercentage() >= 70"
+            [class.medium]="
+              getProgressPercentage() >= 40 && getProgressPercentage() < 70
+            "
+            [class.low]="
+              getProgressPercentage() < 40 && getProgressPercentage() > 0
+            "
+          >
+            <span
+              class="progress-animation-dot"
+              *ngIf="
+                getProgressPercentage() > 0 && getProgressPercentage() < 100
+              "
+            ></span>
+          </div>
         </div>
       </div>
 
@@ -137,11 +145,27 @@
                     class="progress-fill"
                     [class.high]="item.progress >= 70"
                     [class.medium]="item.progress >= 40 && item.progress < 70"
-                    [class.low]="item.progress < 40"
+                    [class.low]="item.progress < 40 && item.progress > 0"
                     [style.width.%]="item.progress"
-                  ></div>
+                    [style.transition]="'width 0.3s ease-out'"
+                  >
+                    <span
+                      class="progress-animation-dot"
+                      *ngIf="item.status === 'processing'"
+                    ></span>
+                  </div>
                 </div>
-                <div class="progress-badge">{{ item.progress }}%</div>
+                <div
+                  class="progress-badge"
+                  [ngClass]="{
+                    completed: item.status === 'completed',
+                    failed: item.status === 'failed',
+                    processing: item.status === 'processing',
+                    pending: item.status === 'pending'
+                  }"
+                >
+                  {{ item.progress }}%
+                </div>
               </div>
             </td>
           </ng-container>
