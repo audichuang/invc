@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -30,7 +32,8 @@ public class FundController {
     @PostMapping(value = "/fund-events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribeToEvents(@RequestBody SseRequest sseRequest) {
         String correlationId = sseRequest.getCorrelationId();
-        log.info("為關聯 ID {} 建立 SSE 連線 (POST, body)", correlationId);
-        return taskService.createSseEmitter(correlationId);
+        List<String> taskIds = sseRequest.getTaskIds();
+        log.info("為關聯 ID {} (SSE Connection ID) 建立 SSE 連線，處理的任務 IDs: {}", correlationId, taskIds);
+        return taskService.createSseEmitter(correlationId, taskIds);
     }
 }

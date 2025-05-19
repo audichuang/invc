@@ -110,8 +110,9 @@ export class TaskService {
      * 建立 SSE 連接
      * @param correlationId 關聯 ID
      * @param system 系統類型，預設為 'fund'
+     * @param taskIds 可選的任務 ID 列表
      */
-    public connectToEventStream(correlationId: string, system: SystemType = 'fund'): void {
+    public connectToEventStream(correlationId: string, system: SystemType = 'fund', taskIds?: string[]): void {
         // 檢查連接是否已存在
         if (this.connections.has(correlationId)) {
             this.logInfo(`已存在的 SSE 連接 (${correlationId})`);
@@ -131,7 +132,7 @@ export class TaskService {
         this.connections.set(correlationId, connection);
 
         // 建立並訂閱 SSE Observable
-        const subscription = this.createSseObservable(correlationId, system, config, abortController)
+        const subscription = this.createSseObservable(correlationId, system, config, abortController, taskIds)
             .subscribe({
                 error: (error: Error) => this.handleConnectionError(correlationId, system, error),
                 complete: () => this.logInfo(`${system} 系統 SSE 連接已完成 (${correlationId})`)
@@ -215,11 +216,18 @@ export class TaskService {
         correlationId: string,
         system: SystemType,
         config: SystemConfig,
-        abortController: AbortController
+        abortController: AbortController,
+        taskIds?: string[]
     ): Observable<void> {
         return new Observable<void>(observer => {
             const fetchData = async () => {
                 try {
+                    // 建立 SSE 連接請求主體
+                    const requestBody: any = { correlationId };
+                    if (taskIds && taskIds.length > 0) {
+                        requestBody.taskIds = taskIds;
+                    }
+
                     // 建立 SSE 連接
                     const response = await fetch(`${config.apiUrl}/${config.eventsEndpoint}`, {
                         method: 'POST',
@@ -228,7 +236,7 @@ export class TaskService {
                             'Content-Type': 'application/json',
                             'Accept': 'text/event-stream'
                         },
-                        body: JSON.stringify({ correlationId })
+                        body: JSON.stringify(requestBody)
                     });
 
                     // 檢查響應
