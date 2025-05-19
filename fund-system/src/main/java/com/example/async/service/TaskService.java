@@ -144,7 +144,7 @@ public class TaskService {
 
             // 執行子任務
             for (int i = 0; i < request.getNumberOfSubtasks(); i++) {
-                Thread.sleep(22000);
+                Thread.sleep(5000);
                 executeSubtask(correlationId, i);
             }
 
