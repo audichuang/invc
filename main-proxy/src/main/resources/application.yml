@@ -9,16 +9,13 @@ spring:
       globalcors:
         corsConfigurations:
           "[/**]":
-            allowedOrigins: "http://localhost:4200"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
+            allowedOriginPatterns: "*"
+            allowedOrigins: "*"
+            allowedMethods: "*"
             allowedHeaders: "*"
-            allowCredentials: true
-            maxAge: 3600
+            exposedHeaders: "*"
+            allowCredentials: false
+            maxAge: 86400
       routes:
         - id: fund-proxy-cluster1
           uri: http://localhost:8081
