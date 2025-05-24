@@ -56,15 +56,15 @@ interface SystemConfig {
     providedIn: 'root'
 })
 export class TaskService {
-    // API 端點配置
+    // API 端點配置 - 統一使用主反向代理
     private readonly API_CONFIG: Record<SystemType, SystemConfig> = {
         fund: {
-            apiUrl: 'http://localhost:8080/api',
+            apiUrl: 'http://localhost:8000/api',
             eventsEndpoint: 'fund-events'
         },
         bond: {
-            apiUrl: 'http://localhost:8081/api',
-            eventsEndpoint: 'bond-events'
+            apiUrl: 'http://localhost:8000/api',
+            eventsEndpoint: 'fund-events'  // 暫時都使用fund-events，債券系統未實現
         }
     };
 
@@ -91,13 +91,29 @@ export class TaskService {
     /**
      * 發起任務請求 (保留向後兼容)
      * @param request 任務請求
+     * @param system 系統類型，預設為 'fund'
      * @returns 響應 Observable
      */
-    public initiateTask(request: TaskRequest): Observable<string> {
+    public initiateTask(request: TaskRequest, system: SystemType = 'fund'): Observable<string> {
+        // 準備headers
+        const headers: { [key: string]: string } = {
+            'Content-Type': 'application/json'
+        };
+
+        // 添加集群路由Header
+        if (system === 'fund') {
+            headers['X-Cluster-Route'] = 'cluster1';
+        } else if (system === 'bond') {
+            headers['X-Cluster-Route'] = 'cluster2';
+        }
+
         return this.http.post<string>(
-            `${this.API_CONFIG.fund.apiUrl}/first-api`,
+            `${this.API_CONFIG[system].apiUrl}/fund-api`,
             request,
-            { responseType: 'text' as 'json' }
+            {
+                responseType: 'text' as 'json',
+                headers
+            }
         ).pipe(
             catchError(error => {
                 this.logError('初始化任務失敗', error);
@@ -228,14 +244,24 @@ export class TaskService {
                         requestBody.taskIds = taskIds;
                     }
 
+                    // 準備Headers，添加集群路由
+                    const headers: { [key: string]: string } = {
+                        'Content-Type': 'application/json',
+                        'Accept': 'text/event-stream'
+                    };
+
+                    // 添加集群路由Header (基金系統預設路由到cluster1)
+                    if (system === 'fund') {
+                        headers['X-Cluster-Route'] = 'cluster1';
+                    } else if (system === 'bond') {
+                        headers['X-Cluster-Route'] = 'cluster2';
+                    }
+
                     // 建立 SSE 連接
                     const response = await fetch(`${config.apiUrl}/${config.eventsEndpoint}`, {
                         method: 'POST',
                         signal: abortController.signal,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'text/event-stream'
-                        },
+                        headers,
                         body: JSON.stringify(requestBody)
                     });
 
@@ -291,18 +317,22 @@ export class TaskService {
 
                         // 處理每一行
                         lines.forEach((line, index) => {
+                            console.log(`[SSE Debug] 收到行: "${line}"`);
                             // 處理數據行
                             if (line.startsWith('data:')) {
                                 const jsonData = line.substring(5).trim();
+                                console.log(`[SSE Debug] 處理數據行: "${jsonData}"`);
                                 if (jsonData) this.processEvent(jsonData, undefined, system);
                             }
                             // 處理事件行
                             else if (line.startsWith('event:')) {
                                 const eventName = line.substring(6).trim();
+                                console.log(`[SSE Debug] 處理事件行: "${eventName}"`);
                                 const nextLineIndex = index + 1;
 
                                 if (nextLineIndex < lines.length && lines[nextLineIndex].startsWith('data:')) {
                                     const jsonData = lines[nextLineIndex].substring(5).trim();
+                                    console.log(`[SSE Debug] 對應數據: "${jsonData}"`);
                                     if (jsonData) this.processEvent(jsonData, eventName, system);
                                 }
                             }

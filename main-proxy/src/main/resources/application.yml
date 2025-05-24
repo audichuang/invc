@@ -1,0 +1,53 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: main-proxy
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: fund-proxy-cluster1
+          uri: http://localhost:8081
+          predicates:
+            - Header=X-Cluster-Route, cluster1
+            - Path=/api/**
+          order: 1
+        - id: fund-proxy-cluster2
+          uri: http://localhost:8082
+          predicates:
+            - Header=X-Cluster-Route, cluster2
+            - Path=/api/**
+          order: 2
+        - id: fund-proxy-default
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/**
+          order: 100
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: INFO
+    com.example.proxy: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,gateway

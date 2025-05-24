@@ -4,7 +4,7 @@ import com.example.async.model.TaskEvent;
 import com.example.async.model.TaskRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -20,10 +20,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class TaskService {
-    private final KafkaTemplate<String, TaskEvent> kafkaTemplate;
+    private final RedisEventService redisEventService;
     private final Map<String, SseEmitter> sseEmitterMap = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> heartbeatFutureMap = new ConcurrentHashMap<>();
     private final Map<String, List<String>> sseConnectionTaskIdsMap = new ConcurrentHashMap<>();
@@ -31,6 +30,17 @@ public class TaskService {
     private static final String EVENT_TOPIC = "task-events";
     private static final ScheduledExecutorService HEARTBEAT_SCHEDULER = Executors.newScheduledThreadPool(2);
     private static final long HEARTBEAT_INTERVAL_SECONDS = 10;
+
+    private final String podId;
+    private final String clusterId;
+
+    public TaskService(RedisEventService redisEventService,
+            String podId,
+            @Value("${app.cluster.id}") String clusterId) {
+        this.redisEventService = redisEventService;
+        this.podId = podId;
+        this.clusterId = clusterId;
+    }
 
     // 用於提取基本correlationId的正則表達式
     private static final Pattern CORRELATION_ID_PATTERN = Pattern.compile("^(.*?)-\\d+$");
@@ -80,8 +90,10 @@ public class TaskService {
                     .data(connectEvent));
 
             sseEmitterMap.put(sseConnectionId, emitter);
+            // 註冊SSE連接到Redis
+            redisEventService.registerSseConnection(sseConnectionId, podId, clusterId);
             startHeartbeat(sseConnectionId);
-            log.info("已為關聯 ID {} 添加 SSE Emitter 到映射中", sseConnectionId);
+            log.info("已為關聯 ID {} 添加 SSE Emitter 到映射中 (POD: {}, Cluster: {})", sseConnectionId, podId, clusterId);
         } catch (IOException e) {
             log.error("向關聯 ID 為 {} 的 SSE 發送初始事件時出錯", sseConnectionId, e);
             stopHeartbeat(sseConnectionId);
@@ -198,8 +210,8 @@ public class TaskService {
     }
 
     private void publishEvent(TaskEvent event) {
-        log.info("向 Kafka 發布事件: {}", event);
-        kafkaTemplate.send(EVENT_TOPIC, event.getCorrelationId(), event);
+        log.info("向 Redis 發布事件: {}", event);
+        redisEventService.publishEvent(event);
     }
 
     private String extractSseConnectionIdFromSingleTaskId(String singleTaskId) {
@@ -292,6 +304,8 @@ public class TaskService {
         stopHeartbeat(sseConnectionId); // 確保心跳也被停止和移除
         sseConnectionTaskIdsMap.remove(sseConnectionId);
         sseConnectionCompletedTasksMap.remove(sseConnectionId);
+        // 從Redis移除SSE連接註冊
+        redisEventService.unregisterSseConnection(sseConnectionId);
         log.info("已清理 SSE 連線 {} 的所有相關資源", sseConnectionId);
     }
 }

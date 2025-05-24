@@ -1,0 +1,49 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: fund-proxy-1
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: fund-service-route
+          uri: lb://fund-service-cluster1
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: RequestSize
+              args:
+                maxSize: 5MB
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+    loadbalancer:
+      configurations: default
+      ribbon:
+        enabled: false
+    discovery:
+      client:
+        simple:
+          instances:
+            fund-service-cluster1:
+              - instanceId: fund-service-1
+                uri: http://localhost:7001
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: INFO
+    com.example.proxy: DEBUG
