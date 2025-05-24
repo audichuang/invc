@@ -38,6 +38,8 @@ spring:
             fund-service-cluster1:
               - instanceId: fund-service-1
                 uri: http://localhost:7001
+              - instanceId: fund-service-2
+                uri: http://localhost:7002
 
 logging:
   level:

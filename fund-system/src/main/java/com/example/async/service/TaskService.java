@@ -27,7 +27,7 @@ public class TaskService {
     private final Map<String, ScheduledFuture<?>> heartbeatFutureMap = new ConcurrentHashMap<>();
     private final Map<String, List<String>> sseConnectionTaskIdsMap = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> sseConnectionCompletedTasksMap = new ConcurrentHashMap<>();
-    private static final String EVENT_TOPIC = "task-events";
+    private static final String EVENT_CHANNEL = "task-events";
     private static final ScheduledExecutorService HEARTBEAT_SCHEDULER = Executors.newScheduledThreadPool(2);
     private static final long HEARTBEAT_INTERVAL_SECONDS = 10;
 
@@ -229,7 +229,7 @@ public class TaskService {
 
     public void handleEvent(TaskEvent event) {
         String singleTaskId = event.getCorrelationId(); // 事件的 correlationId 是單個任務的 ID
-        log.info("Kafka 監聽器收到事件，單任務 ID: {}, 狀態: {}", singleTaskId, event.getStatus());
+        log.info("Redis 監聽器收到事件，單任務 ID: {}, 狀態: {}", singleTaskId, event.getStatus());
 
         String sseConnectionId = extractSseConnectionIdFromSingleTaskId(singleTaskId);
         if (sseConnectionId == null) {
