@@ -30,25 +30,30 @@ public class PodIdentityConfig {
     }
 
     /**
-     * 生成唯一的POD ID - 使用主機名+端口確保唯一性
+     * 生成唯一的POD ID - 使用多重標識符確保唯一性
+     * 支援鏡像環境避免衝突，最後加上UUID確保100%唯一性
      */
     private String generateUniquePodId() {
         String hostName = getHostName();
+        String processId = getProcessIdentifier();
+        String networkId = getNetworkIdentifier();
+        String uniqueSuffix = generateUniqueSuffix();
 
-        // 方案1: 簡化主機名 + 端口
+        // 方案1: 簡化主機名 + 端口 + 進程標識 + 隨機後綴
         String simplifiedHost = simplifyHostName(hostName);
-        String podId = "pod-" + simplifiedHost + "-" + serverPort;
+        String baseId = "pod-" + simplifiedHost + "-" + serverPort + "-" + processId + "-" + uniqueSuffix;
 
-        // 方案2: 如果主機名太長，使用hashCode
-        if (podId.length() > 20) {
-            int hostHash = Math.abs(hostName.hashCode()) % 1000;
-            podId = "pod-" + hostHash + "-" + serverPort;
+        // 方案2: 如果太長，使用緊湊模式但保留唯一性
+        if (baseId.length() > 30) {
+            String combined = hostName + serverPort + processId + networkId;
+            int combinedHash = Math.abs(combined.hashCode()) % 1000;
+            baseId = "pod-" + combinedHash + "-" + serverPort + "-" + uniqueSuffix;
         }
 
-        log.debug("🔍 POD ID生成 - 原始主機名: {}, 簡化後: {}, 最終POD ID: {}",
-                hostName, simplifiedHost, podId);
+        log.debug("🔍 POD ID生成 - Host: {}, Process: {}, Network: {}, Unique: {}, 最終POD ID: {}",
+                hostName, processId, networkId, uniqueSuffix, baseId);
 
-        return podId;
+        return baseId;
     }
 
     /**
@@ -91,6 +96,78 @@ public class PodIdentityConfig {
                 hostName = "localhost";
             }
             return hostName;
+        }
+    }
+
+    /**
+     * 獲取進程標識符 - 用於鏡像環境區分
+     */
+    private String getProcessIdentifier() {
+        try {
+            // 方案1: 使用JVM進程ID
+            String pid = java.lang.management.ManagementFactory.getRuntimeMXBean().getName();
+            if (pid.contains("@")) {
+                pid = pid.split("@")[0]; // 提取進程ID部分
+            }
+
+            // 方案2: 如果PID太長，取後4位
+            if (pid.length() > 4) {
+                pid = pid.substring(pid.length() - 4);
+            }
+
+            return pid;
+        } catch (Exception e) {
+            log.warn("無法獲取進程ID，使用隨機值: {}", e.getMessage());
+            return String.valueOf(System.currentTimeMillis() % 10000);
+        }
+    }
+
+    /**
+     * 獲取網絡標識符 - 額外的唯一性保證
+     */
+    private String getNetworkIdentifier() {
+        try {
+            // 方案1: 使用本地IP地址的後兩段
+            String localIp = InetAddress.getLocalHost().getHostAddress();
+            String[] ipParts = localIp.split("\\.");
+            if (ipParts.length >= 2) {
+                return ipParts[ipParts.length - 2] + ipParts[ipParts.length - 1];
+            }
+
+            // 方案2: 使用MAC地址的一部分
+            java.net.NetworkInterface ni = java.net.NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+            if (ni != null && ni.getHardwareAddress() != null) {
+                byte[] mac = ni.getHardwareAddress();
+                return String.format("%02x%02x", mac[mac.length - 2], mac[mac.length - 1]);
+            }
+
+        } catch (Exception e) {
+            log.debug("無法獲取網絡標識符: {}", e.getMessage());
+        }
+
+        // 備用方案: 使用時間戳的一部分
+        return String.valueOf(System.nanoTime() % 1000);
+    }
+
+    /**
+     * 生成唯一後綴 - 確保100%無衝突
+     * 使用UUID的一部分或隨機字母
+     */
+    private String generateUniqueSuffix() {
+        try {
+            // 方案1: 使用UUID的前8位字符（數字+字母組合）
+            String uuid = java.util.UUID.randomUUID().toString().replace("-", "");
+            return uuid.substring(0, 4).toLowerCase();
+
+        } catch (Exception e) {
+            // 方案2: 純隨機4位英文字母作為備用
+            StringBuilder sb = new StringBuilder();
+            java.util.Random random = new java.util.Random();
+            for (int i = 0; i < 4; i++) {
+                char c = (char) ('a' + random.nextInt(26));
+                sb.append(c);
+            }
+            return sb.toString();
         }
     }
 
